@@ -109,10 +109,19 @@ impl WaitingModal {
             frame.empty_row();
             if pb.is_indeterminate() {
                 frame.row(format!("  {}", bar_visual));
-                frame.row(format!("  {} • {}", pb.format_counts().cyan(), pb.format_speed().dimmed()));
+                frame.row(format!(
+                    "  {} • {}",
+                    pb.format_counts().cyan(),
+                    pb.format_speed().dimmed()
+                ));
             } else {
                 frame.row(format!("  {} {:>5.1}%", bar_visual, pb.percent()));
-                frame.row(format!("  {} • {} • {}", pb.format_counts().cyan(), pb.format_speed().dimmed(), pb.format_eta().yellow()));
+                frame.row(format!(
+                    "  {} • {} • {}",
+                    pb.format_counts().cyan(),
+                    pb.format_speed().dimmed(),
+                    pb.format_eta().yellow()
+                ));
             }
         }
 
@@ -153,10 +162,19 @@ impl WaitingModal {
             frame.empty_row();
             if pb.is_indeterminate() {
                 frame.row(format!("  {}", bar_visual));
-                frame.row(format!("  {} • {}", pb.format_counts().cyan(), pb.format_speed().dimmed()));
+                frame.row(format!(
+                    "  {} • {}",
+                    pb.format_counts().cyan(),
+                    pb.format_speed().dimmed()
+                ));
             } else {
                 frame.row(format!("  {} {:>5.1}%", bar_visual, pb.percent()));
-                frame.row(format!("  {} • {} • {}", pb.format_counts().cyan(), pb.format_speed().dimmed(), pb.format_eta().yellow()));
+                frame.row(format!(
+                    "  {} • {} • {}",
+                    pb.format_counts().cyan(),
+                    pb.format_speed().dimmed(),
+                    pb.format_eta().yellow()
+                ));
             }
         }
 

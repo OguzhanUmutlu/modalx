@@ -13,7 +13,9 @@ use crate::error::Result;
 use crate::frame::BoxFrame;
 use crate::keys::{KeyAction, KeyMap};
 use crate::modals::confirm::ConfirmModal;
-use crate::terminal::{clean_exit, get_content_width, get_terminal_size, is_terminal_too_small, wait_for_valid_size};
+use crate::terminal::{
+    clean_exit, get_content_width, get_terminal_size, is_terminal_too_small, wait_for_valid_size,
+};
 
 /// Semantic field type with built-in validation and formatting behaviors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -341,7 +343,11 @@ impl FormField {
     pub fn display_value(&self) -> String {
         if self.field_type == FormFieldType::Checkbox {
             if self.is_checked() {
-                let mark = if crate::theme::is_utf8_supported() { "✓" } else { "X" };
+                let mark = if crate::theme::is_utf8_supported() {
+                    "✓"
+                } else {
+                    "X"
+                };
                 format!("[{}] Enabled", mark)
             } else {
                 "[ ] Disabled".to_string()
@@ -609,12 +615,26 @@ impl FormModal {
                     "  ".to_string()
                 };
                 let input_line = if field.field_type == FormFieldType::Checkbox {
-                    let mark = if crate::theme::is_utf8_supported() { "✓" } else { "X" };
+                    let mark = if crate::theme::is_utf8_supported() {
+                        "✓"
+                    } else {
+                        "X"
+                    };
                     if field.is_checked() {
                         if is_focused {
-                            format!("{}{} {}", prefix, format!("[{}]", mark).green().bold(), "Enabled".green().bold())
+                            format!(
+                                "{}{} {}",
+                                prefix,
+                                format!("[{}]", mark).green().bold(),
+                                "Enabled".green().bold()
+                            )
                         } else {
-                            format!("{}{} {}", prefix, format!("[{}]", mark).green(), "Enabled".green())
+                            format!(
+                                "{}{} {}",
+                                prefix,
+                                format!("[{}]", mark).green(),
+                                "Enabled".green()
+                            )
                         }
                     } else if is_focused {
                         format!("{}{} {}", prefix, "[ ]".white().bold(), "Disabled".white())
@@ -951,8 +971,9 @@ mod tests {
         field.set_checked(false);
         assert!(!field.is_checked());
 
-        let mut form = FormModal::new("CHECKBOX FORM")
-            .with_field(FormField::checkbox_with_default("white_list", "Whitelist", true));
+        let mut form = FormModal::new("CHECKBOX FORM").with_field(
+            FormField::checkbox_with_default("white_list", "Whitelist", true),
+        );
         let res = form.validate_and_collect().expect("valid");
         assert!(res.get_bool("white_list"));
     }

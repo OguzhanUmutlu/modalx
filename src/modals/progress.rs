@@ -251,14 +251,11 @@ impl ProgressBar {
                     if full_blocks < width && remainder > 0 {
                         bar.push_str(FRACTIONAL_BLOCKS[remainder]);
                     }
-                    let unfilled_len = width.saturating_sub(full_blocks + if remainder > 0 { 1 } else { 0 });
+                    let unfilled_len =
+                        width.saturating_sub(full_blocks + if remainder > 0 { 1 } else { 0 });
                     let unfilled = "░".repeat(unfilled_len);
 
-                    format!(
-                        "[{}{}]",
-                        bar.cyan().bold(),
-                        unfilled.dimmed()
-                    )
+                    format!("[{}{}]", bar.cyan().bold(), unfilled.dimmed())
                 }
                 ProgressStyle::UnicodeBlock => {
                     let filled_len = ((width as f64 * frac).round() as usize).min(width);
@@ -267,11 +264,7 @@ impl ProgressBar {
                     let filled = "█".repeat(filled_len);
                     let unfilled = "░".repeat(unfilled_len);
 
-                    format!(
-                        "[{}{}]",
-                        filled.cyan().bold(),
-                        unfilled.dimmed()
-                    )
+                    format!("[{}{}]", filled.cyan().bold(), unfilled.dimmed())
                 }
                 ProgressStyle::Ascii => {
                     let filled_len = ((width as f64 * frac).round() as usize).min(width);
@@ -484,7 +477,11 @@ impl ProgressModal {
     }
 
     /// Marks progress as completed, renders the final state, and flushes stdout.
-    pub fn finish(&mut self, final_message: impl Into<String>, stdout: &mut io::Stdout) -> Result<()> {
+    pub fn finish(
+        &mut self,
+        final_message: impl Into<String>,
+        stdout: &mut io::Stdout,
+    ) -> Result<()> {
         self.progress.current = self.progress.total;
         self.message = final_message.into();
         self.render_forced(stdout)?;

@@ -11,9 +11,7 @@ use crate::error::Result;
 use crate::frame::BoxFrame;
 use crate::keys::{KeyAction, KeyMap};
 use crate::section::{FieldSection, ModalSection, SelectItem};
-use crate::terminal::{
-    clean_exit, get_terminal_size, is_terminal_too_small, wait_for_valid_size,
-};
+use crate::terminal::{clean_exit, get_terminal_size, is_terminal_too_small, wait_for_valid_size};
 use crate::text_flow::{wrap_delimited_string, wrap_words};
 use crate::theme::strip_ansi;
 
@@ -55,6 +53,7 @@ pub struct SelectModal {
     pub shortcuts: Option<crate::shortcuts::Shortcuts>,
     pub max_width: u16,
     pub wrap_around: bool,
+    pub tick_interval: Option<std::time::Duration>,
 }
 
 impl Default for SelectModal {
@@ -81,6 +80,7 @@ impl SelectModal {
             shortcuts: None,
             max_width: 0,
             wrap_around: false,
+            tick_interval: None,
         }
     }
 
@@ -251,6 +251,12 @@ impl SelectModal {
         self
     }
 
+    /// Sets an optional tick interval for background processing and periodic updates.
+    pub fn with_tick_interval(mut self, interval: std::time::Duration) -> Self {
+        self.tick_interval = Some(interval);
+        self
+    }
+
     /// Constructs the responsive `BoxFrame` and calculates the dynamic item `viewport_size`
     /// based on terminal dimensions and strict vertical height prioritization.
     pub fn build_frame(
@@ -333,7 +339,10 @@ impl SelectModal {
         });
 
         let has_breadcrumbs = self.show_breadcrumbs
-            && effective_title.as_ref().map(|(_, err)| !*err).unwrap_or(false)
+            && effective_title
+                .as_ref()
+                .map(|(_, err)| !*err)
+                .unwrap_or(false)
             && (self.breadcrumbs.is_some() || crate::nav::get_breadcrumbs().len() > 1);
 
         let title_overhead = if effective_title.is_some() {
@@ -361,12 +370,8 @@ impl SelectModal {
         let footer_button_items = shortcuts.to_button_items();
         let footer_lines_count = if !footer_button_items.is_empty() {
             let inner_w = width.saturating_sub(2);
-            let wrapped = crate::text_flow::wrap_button_items(
-                &footer_button_items,
-                "  |  ",
-                inner_w,
-                true,
-            );
+            let wrapped =
+                crate::text_flow::wrap_button_items(&footer_button_items, "  |  ", inner_w, true);
             1 + wrapped.len() // 1 divider + wrapped rows
         } else {
             0
@@ -482,6 +487,24 @@ impl SelectModal {
     where
         F: FnMut(char, usize, &mut [SelectItem], &mut Vec<String>) -> EventDecision,
     {
+        self.run_with_tick_handler(
+            selected_idx,
+            |ch, idx, entries, headers| on_action(ch, idx, entries.as_mut_slice(), headers),
+            |_, _, _| false,
+        )
+    }
+
+    /// Executes the interactive menu event loop with action and tick handler callbacks.
+    pub fn run_with_tick_handler<F, T>(
+        &self,
+        selected_idx: &mut usize,
+        mut on_action: F,
+        mut on_tick: T,
+    ) -> Result<SelectOutcome>
+    where
+        F: FnMut(char, usize, &mut Vec<SelectItem>, &mut Vec<String>) -> EventDecision,
+        T: FnMut(&mut usize, &mut Vec<SelectItem>, &mut Vec<String>) -> bool,
+    {
         let mut stdout = io::stdout();
         enable_raw_mode()?;
         let _ = execute!(stdout, Hide);
@@ -502,9 +525,32 @@ impl SelectModal {
             }
 
             let (term_w, term_h) = get_terminal_size();
-            let (frame, viewport_size) =
-                self.build_frame_state(term_w, term_h, *selected_idx, &mut scroll_offset, &entries, &header_rows);
+            let (frame, viewport_size) = self.build_frame_state(
+                term_w,
+                term_h,
+                *selected_idx,
+                &mut scroll_offset,
+                &entries,
+                &header_rows,
+            );
             frame.render(&mut stdout)?;
+
+            let has_event = match self.tick_interval {
+                Some(timeout) => event::poll(timeout)?,
+                None => true,
+            };
+
+            if !has_event {
+                let re_render = on_tick(selected_idx, &mut entries, &mut header_rows);
+                if re_render {
+                    if entries.is_empty() {
+                        *selected_idx = 0;
+                    } else if *selected_idx >= entries.len() {
+                        *selected_idx = entries.len().saturating_sub(1);
+                    }
+                }
+                continue;
+            }
 
             match event::read()? {
                 Event::Resize(..) => continue,
@@ -547,16 +593,23 @@ impl SelectModal {
                         }
                         KeyAction::Submit | KeyAction::Right => {
                             if !entries.is_empty() {
-                                let hotkey_char = entries[*selected_idx]
-                                    .hotkey
-                                    .chars()
-                                    .next()
-                                    .unwrap_or('\n');
-                                match on_action(hotkey_char, *selected_idx, &mut entries, &mut header_rows) {
+                                let hotkey_char =
+                                    entries[*selected_idx].hotkey.chars().next().unwrap_or('\n');
+                                match on_action(
+                                    hotkey_char,
+                                    *selected_idx,
+                                    &mut entries,
+                                    &mut header_rows,
+                                ) {
                                     EventDecision::Proceed => {
                                         return Ok(SelectOutcome::Selected(*selected_idx));
                                     }
                                     EventDecision::Cancel => {
+                                        if entries.is_empty() {
+                                            *selected_idx = 0;
+                                        } else if *selected_idx >= entries.len() {
+                                            *selected_idx = entries.len().saturating_sub(1);
+                                        }
                                         continue;
                                     }
                                 }
@@ -576,7 +629,10 @@ impl SelectModal {
                             for (idx, entry) in entries.iter().enumerate() {
                                 if !entry.hotkey.is_empty()
                                     && (entry.hotkey.eq_ignore_ascii_case(&c_str)
-                                        || entry.aliases.iter().any(|a| a.eq_ignore_ascii_case(&c_str)))
+                                        || entry
+                                            .aliases
+                                            .iter()
+                                            .any(|a| a.eq_ignore_ascii_case(&c_str)))
                                 {
                                     matched_idx = Some(idx);
                                     break;
@@ -590,6 +646,11 @@ impl SelectModal {
                                         return Ok(SelectOutcome::Selected(idx));
                                     }
                                     EventDecision::Cancel => {
+                                        if entries.is_empty() {
+                                            *selected_idx = 0;
+                                        } else if *selected_idx >= entries.len() {
+                                            *selected_idx = entries.len().saturating_sub(1);
+                                        }
                                         continue;
                                     }
                                 }
@@ -609,6 +670,11 @@ impl SelectModal {
                                         ));
                                     }
                                     EventDecision::Cancel => {
+                                        if entries.is_empty() {
+                                            *selected_idx = 0;
+                                        } else if *selected_idx >= entries.len() {
+                                            *selected_idx = entries.len().saturating_sub(1);
+                                        }
                                         continue;
                                     }
                                 }
@@ -618,6 +684,17 @@ impl SelectModal {
                     }
                 }
                 _ => {}
+            }
+
+            if self.tick_interval.is_some() {
+                let re_render = on_tick(selected_idx, &mut entries, &mut header_rows);
+                if re_render {
+                    if entries.is_empty() {
+                        *selected_idx = 0;
+                    } else if *selected_idx >= entries.len() {
+                        *selected_idx = entries.len().saturating_sub(1);
+                    }
+                }
             }
         }
     }
@@ -816,7 +893,9 @@ mod tests {
         assert!(lines[0].contains('╭') || lines[0].contains('+'));
         assert!(lines[1].contains("STEP 3/6: SELECT SERVER SOFTWARE"));
         // Header row must be present
-        assert!(lines.iter().any(|l| l.contains("Select the server software implementation:")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("Select the server software implementation:")));
         // Viewport size dynamically shrunk to fit remaining space
         assert!(viewport_size > 0 && viewport_size < 17);
     }
@@ -916,5 +995,13 @@ mod tests {
         // The keyed entry should have its badge "[c]"
         assert!(plain.contains("[c]"));
     }
-}
 
+    #[test]
+    fn test_select_modal_tick_interval_configuration() {
+        let modal = SelectModal::new().with_tick_interval(std::time::Duration::from_millis(150));
+        assert_eq!(
+            modal.tick_interval,
+            Some(std::time::Duration::from_millis(150))
+        );
+    }
+}

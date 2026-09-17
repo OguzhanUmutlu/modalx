@@ -10,9 +10,7 @@ use std::io;
 use crate::error::Result;
 use crate::frame::BoxFrame;
 use crate::keys::{KeyAction, KeyMap};
-use crate::terminal::{
-    clean_exit, get_terminal_size, is_terminal_too_small, wait_for_valid_size,
-};
+use crate::terminal::{clean_exit, get_terminal_size, is_terminal_too_small, wait_for_valid_size};
 use crate::text_flow::truncate_ellipsis;
 use crate::theme::strip_ansi;
 
@@ -190,12 +188,8 @@ impl TableModal {
         let footer_button_items = shortcuts.to_button_items();
         let footer_lines_count = if !footer_button_items.is_empty() {
             let inner_w = width.saturating_sub(2);
-            let wrapped = crate::text_flow::wrap_button_items(
-                &footer_button_items,
-                "  |  ",
-                inner_w,
-                true,
-            );
+            let wrapped =
+                crate::text_flow::wrap_button_items(&footer_button_items, "  |  ", inner_w, true);
             1 + wrapped.len()
         } else {
             0
@@ -241,18 +235,10 @@ impl TableModal {
                 header_parts.push(col.header.clone());
             } else if col.align_right {
                 let pad = w - h_clean.len();
-                header_parts.push(format!(
-                    "{}{}",
-                    " ".repeat(pad),
-                    col.header.cyan().bold()
-                ));
+                header_parts.push(format!("{}{}", " ".repeat(pad), col.header.cyan().bold()));
             } else {
                 let pad = w - h_clean.len();
-                header_parts.push(format!(
-                    "{}{}",
-                    col.header.cyan().bold(),
-                    " ".repeat(pad)
-                ));
+                header_parts.push(format!("{}{}", col.header.cyan().bold(), " ".repeat(pad)));
             }
         }
         frame.row(header_parts.join(" "));
