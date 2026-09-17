@@ -227,6 +227,69 @@ impl FormField {
         }
     }
 
+    /// Deletes the word preceding the cursor.
+    pub fn delete_word(&mut self) {
+        if self.cursor == 0 || self.value.is_empty() {
+            return;
+        }
+        let chars: Vec<char> = self.value.chars().collect();
+        let cur = self.cursor.min(chars.len());
+        let before = &chars[..cur];
+
+        let mut idx = cur;
+        while idx > 0 && before[idx - 1].is_whitespace() {
+            idx -= 1;
+        }
+        while idx > 0 && !before[idx - 1].is_whitespace() {
+            idx -= 1;
+        }
+
+        let mut candidate: String = chars[..idx].iter().collect();
+        let after: String = chars[cur..].iter().collect();
+        candidate.push_str(&after);
+
+        let accepted = if let Some(ref fv) = self.force_validator {
+            fv(&self.value, &candidate)
+        } else {
+            candidate
+        };
+
+        self.value = accepted;
+        self.cursor = idx.min(self.value.chars().count());
+        self.error = None;
+    }
+
+    /// Moves cursor backward by one word.
+    pub fn word_left(&mut self) {
+        if self.cursor == 0 {
+            return;
+        }
+        let chars: Vec<char> = self.value.chars().collect();
+        let cur = self.cursor.min(chars.len());
+        let mut idx = cur;
+        while idx > 0 && chars[idx - 1].is_whitespace() {
+            idx -= 1;
+        }
+        while idx > 0 && !chars[idx - 1].is_whitespace() {
+            idx -= 1;
+        }
+        self.cursor = idx;
+    }
+
+    /// Moves cursor forward by one word.
+    pub fn word_right(&mut self) {
+        let chars: Vec<char> = self.value.chars().collect();
+        let len = chars.len();
+        let mut idx = self.cursor.min(len);
+        while idx < len && !chars[idx].is_whitespace() {
+            idx += 1;
+        }
+        while idx < len && chars[idx].is_whitespace() {
+            idx += 1;
+        }
+        self.cursor = idx.min(len);
+    }
+
     /// Formats the field's current value for rendering on screen.
     pub fn display_value(&self) -> String {
         if let Some(ref fmt) = self.format_fn {
@@ -586,9 +649,24 @@ impl FormModal {
                                 f.cursor = f.value.chars().count();
                             }
                         }
+                        KeyAction::WordLeft => {
+                            if let Some(f) = self.fields.get_mut(self.focused_idx) {
+                                f.word_left();
+                            }
+                        }
+                        KeyAction::WordRight => {
+                            if let Some(f) = self.fields.get_mut(self.focused_idx) {
+                                f.word_right();
+                            }
+                        }
                         KeyAction::Backspace => {
                             if let Some(f) = self.fields.get_mut(self.focused_idx) {
                                 f.backspace();
+                            }
+                        }
+                        KeyAction::DeleteWord => {
+                            if let Some(f) = self.fields.get_mut(self.focused_idx) {
+                                f.delete_word();
                             }
                         }
                         KeyAction::Delete => {

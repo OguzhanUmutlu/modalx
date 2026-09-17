@@ -42,6 +42,7 @@
 
 pub mod error;
 pub mod frame;
+pub mod input;
 pub mod keys;
 pub mod modals;
 pub mod nav;
@@ -53,6 +54,7 @@ pub mod theme;
 
 pub use error::{Result, TuiError};
 pub use frame::{render_too_small, BoxFrame, FrameLine};
+pub use input::{TextInput, TextInputAction};
 pub use keys::{KeyAction, KeyHelpMode, KeyMap};
 pub use modals::*;
 pub use nav::{

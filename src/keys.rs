@@ -151,10 +151,14 @@ impl KeyMap {
             }
         }
 
-        // 3. Readline modifier combos (Ctrl+W, Ctrl+U, Ctrl+Left, Ctrl+Right, Alt+B, Alt+F)
+        // 3. Readline modifier combos (Ctrl+W, Ctrl+Backspace, Alt+Backspace, Ctrl+U, Ctrl+Left, Ctrl+Right, Alt+B, Alt+F)
         if event.modifiers.contains(KeyModifiers::CONTROL) {
             match event.code {
-                KeyCode::Char('w') | KeyCode::Char('W') => return KeyAction::DeleteWord,
+                KeyCode::Char('w')
+                | KeyCode::Char('W')
+                | KeyCode::Backspace
+                | KeyCode::Char('\x08')
+                | KeyCode::Char('\x7f') => return KeyAction::DeleteWord,
                 KeyCode::Char('u') | KeyCode::Char('U') => return KeyAction::ClearInput,
                 KeyCode::Left => return KeyAction::WordLeft,
                 KeyCode::Right => return KeyAction::WordRight,
@@ -164,6 +168,9 @@ impl KeyMap {
 
         if event.modifiers.contains(KeyModifiers::ALT) {
             match event.code {
+                KeyCode::Backspace | KeyCode::Char('\x08') | KeyCode::Char('\x7f') => {
+                    return KeyAction::DeleteWord
+                }
                 KeyCode::Char('b') | KeyCode::Char('B') => return KeyAction::WordLeft,
                 KeyCode::Char('f') | KeyCode::Char('F') => return KeyAction::WordRight,
                 _ => {}
