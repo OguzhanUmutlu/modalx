@@ -8,7 +8,7 @@ repository = "https://github.com/OguzhanUmutlu/modalx"
 description = "A responsive, declarative, box-encapsulated Terminal User Interface (TUI) and modal dialog engine for Rust."
 readme = "README.md"
 keywords = ["tui", "terminal", "modal", "crossterm", "cli"]
-categories = ["command-line-interface", "user-interfaces"]
+categories = ["command-line-interface", "command-line-utilities"]
 
 [dependencies]
 crossterm = "0.29"
