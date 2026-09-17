@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'modalx',
   description: 'Responsive, declarative, box-encapsulated terminal user interface and modal dialog engine for Rust.',
-  base: '/modalx/',
+  base: '/',
   cleanUrls: true,
   lastUpdated: true,
   head: [

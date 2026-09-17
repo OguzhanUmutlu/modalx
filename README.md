@@ -1,7 +1,8 @@
 # modalx
 
 [![Crates.io](https://img.shields.io/crates/v/modalx.svg)](https://crates.io/crates/modalx)
-[![Documentation](https://docs.rs/modalx/badge.svg)](https://docs.rs/modalx)
+[![Documentation](https://img.shields.io/badge/docs-modalx.oguzhanumutlu.com-blue)](https://modalx.oguzhanumutlu.com)
+[![docs.rs](https://docs.rs/modalx/badge.svg)](https://docs.rs/modalx)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A responsive, declarative, box-encapsulated Terminal User Interface (TUI) and modal dialog engine for Rust, built directly on [crossterm](https://crates.io/crates/crossterm).
@@ -57,6 +58,12 @@ Or install via Cargo CLI:
 
 ```bash
 cargo add modalx
+```
+
+Or run the quickstart script:
+
+```bash
+curl -fsSL https://modalx.oguzhanumutlu.com/install.sh | bash
 ```
 
 ---
