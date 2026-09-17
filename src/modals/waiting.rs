@@ -16,6 +16,7 @@ pub struct WaitingModal {
     pub max_width: u16,
     pub shortcuts: Option<crate::shortcuts::Shortcuts>,
     pub progress: Option<crate::modals::progress::ProgressBar>,
+    pub cancellable: bool,
 }
 
 impl WaitingModal {
@@ -28,6 +29,7 @@ impl WaitingModal {
             max_width: 0,
             shortcuts: None,
             progress: None,
+            cancellable: false,
         }
     }
 
@@ -62,6 +64,27 @@ impl WaitingModal {
     pub fn with_shortcuts(mut self, shortcuts: impl Into<crate::shortcuts::Shortcuts>) -> Self {
         self.shortcuts = Some(shortcuts.into());
         self
+    }
+
+    /// Sets whether this modal can be cancelled by the user pressing Escape.
+    pub fn with_cancellable(mut self, cancellable: bool) -> Self {
+        self.cancellable = cancellable;
+        self
+    }
+
+    /// Checks whether the user pressed the Escape key to request cancellation (non-blocking).
+    pub fn check_cancelled(&self) -> Result<bool> {
+        use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+        use std::time::Duration;
+
+        while event::poll(Duration::from_millis(0))? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press && key.code == KeyCode::Esc {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
     }
 
     /// Renders a single frame of the modal with a specific spinner animation frame.
@@ -106,8 +129,10 @@ impl WaitingModal {
 
         if let Some(ref sc) = self.shortcuts {
             frame.shortcuts(sc);
+        } else if self.cancellable {
+            frame.footer("[Esc] Cancel  |  Please wait...".to_string());
         } else {
-            frame.footer("Please wait...".dimmed().to_string());
+            frame.footer("Please wait...".to_string());
         }
         frame.render(stdout)
     }
@@ -148,8 +173,10 @@ impl WaitingModal {
 
         if let Some(ref sc) = self.shortcuts {
             frame.shortcuts(sc);
+        } else if self.cancellable {
+            frame.footer("[Esc] Cancel  |  Please wait...".to_string());
         } else {
-            frame.footer("Please wait...".dimmed().to_string());
+            frame.footer("Please wait...".to_string());
         }
         frame.render(stdout)
     }

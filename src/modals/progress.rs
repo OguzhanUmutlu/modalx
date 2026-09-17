@@ -453,7 +453,7 @@ impl ProgressModal {
         if let Some(ref sc) = self.shortcuts {
             frame.shortcuts(sc);
         } else {
-            frame.footer("Please wait...".dimmed().to_string());
+            frame.footer("Please wait...".to_string());
         }
 
         frame

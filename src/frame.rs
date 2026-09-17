@@ -27,6 +27,7 @@ pub struct BoxFrame {
     pub footer_separator: String,
     pub footer_center: bool,
     pub vertical_center: bool,
+    pub horizontal_center: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +55,7 @@ impl BoxFrame {
             footer_separator: "|".to_string(),
             footer_center: true,
             vertical_center: true,
+            horizontal_center: true,
         }
     }
 
@@ -151,6 +153,12 @@ impl BoxFrame {
     /// Configures whether this box frame should be rendered vertically centered in the terminal.
     pub fn with_vertical_center(mut self, center: bool) -> Self {
         self.vertical_center = center;
+        self
+    }
+
+    /// Configures whether this box frame should be rendered horizontally centered in the terminal.
+    pub fn with_horizontal_center(mut self, center: bool) -> Self {
+        self.horizontal_center = center;
         self
     }
 
@@ -413,7 +421,11 @@ impl BoxFrame {
                     wrap_button_items(&items, &self.footer_separator, inner_w, self.footer_center);
 
                 for w_line in wrapped_lines {
-                    let styled_help = format!("{}{}{}", "\x1B[90m", w_line, RESET);
+                    let styled_help = if w_line.contains("\x1B[") {
+                        w_line
+                    } else {
+                        format!("{}{}{}", "\x1B[37m", w_line, RESET)
+                    };
                     out.push_str(&Self::format_row(&styled_help, w));
                     out.push_str("\r\n");
                 }
@@ -426,15 +438,21 @@ impl BoxFrame {
         out
     }
 
-    /// Renders this frame directly into stdout, vertically centering the box in the terminal window.
+    /// Renders this frame directly into stdout, centering the box in the terminal window.
     pub fn render(&self, stdout: &mut io::Stdout) -> Result<()> {
-        let (_, term_h) = get_terminal_size();
+        let (term_w, term_h) = get_terminal_size();
         let output = self.render_to_string();
         let lines: Vec<&str> = output.lines().collect();
         let box_height = lines.len() as u16;
 
         let top_padding = if self.vertical_center && term_h > box_height {
             (term_h - box_height) / 2
+        } else {
+            0
+        };
+
+        let left_padding = if self.horizontal_center && term_w > self.width as u16 {
+            (term_w - self.width as u16) / 2
         } else {
             0
         };
@@ -448,7 +466,11 @@ impl BoxFrame {
             let y = top_padding + i as u16;
             if y < term_h {
                 queue!(stdout, MoveTo(0, y))?;
-                write!(stdout, "{}\x1B[K", line)?;
+                write!(stdout, "\x1B[K")?;
+                if left_padding > 0 {
+                    queue!(stdout, MoveTo(left_padding, y))?;
+                }
+                write!(stdout, "{}", line)?;
             }
         }
         for y in (top_padding + box_height)..term_h {

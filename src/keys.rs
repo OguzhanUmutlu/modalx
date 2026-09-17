@@ -23,6 +23,8 @@ pub enum KeyAction {
     Submit,
     /// Cancel, escape, or navigate back
     Cancel,
+    /// Save or persist changes (e.g. Ctrl+S)
+    Save,
     /// Toggle item state (e.g. checkbox with Space)
     Toggle,
     /// Remove character before cursor
@@ -160,6 +162,7 @@ impl KeyMap {
                 | KeyCode::Char('\x08')
                 | KeyCode::Char('\x7f') => return KeyAction::DeleteWord,
                 KeyCode::Char('u') | KeyCode::Char('U') => return KeyAction::ClearInput,
+                KeyCode::Char('s') | KeyCode::Char('S') => return KeyAction::Save,
                 KeyCode::Left => return KeyAction::WordLeft,
                 KeyCode::Right => return KeyAction::WordRight,
                 _ => {}

@@ -13,7 +13,7 @@ use crate::error::Result;
 use crate::frame::BoxFrame;
 use crate::keys::{KeyAction, KeyMap};
 use crate::modals::confirm::ConfirmModal;
-use crate::terminal::{clean_exit, get_content_width, is_terminal_too_small, wait_for_valid_size};
+use crate::terminal::{clean_exit, get_content_width, get_terminal_size, is_terminal_too_small, wait_for_valid_size};
 
 /// Semantic field type with built-in validation and formatting behaviors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,6 +26,8 @@ pub enum FormFieldType {
     Integer,
     /// Masked password input (replaces display characters with '*').
     Password,
+    /// Boolean checkbox toggle input ('[✓] Enabled' / '[ ] Disabled').
+    Checkbox,
 }
 
 pub type FieldValidator = Arc<dyn Fn(&str) -> std::result::Result<(), String> + Send + Sync>;
@@ -116,6 +118,51 @@ impl FormField {
         field.field_type = FormFieldType::Password;
         field.format_fn = Some(Arc::new(|s: &str| "*".repeat(s.chars().count())));
         field
+    }
+
+    /// Creates a boolean checkbox field.
+    pub fn checkbox(key: impl Into<String>, label: impl Into<String>) -> Self {
+        Self::checkbox_with_default(key, label, false)
+    }
+
+    /// Creates a boolean checkbox field with an initial checked state.
+    pub fn checkbox_with_default(
+        key: impl Into<String>,
+        label: impl Into<String>,
+        checked: bool,
+    ) -> Self {
+        let mut field = Self::string(key, label);
+        field.field_type = FormFieldType::Checkbox;
+        let val = if checked { "true" } else { "false" };
+        field.value = val.to_string();
+        field.default_value = val.to_string();
+        field.cursor = 0;
+        field
+    }
+
+    /// Sets the initial checked state for a checkbox field.
+    pub fn with_checked(mut self, checked: bool) -> Self {
+        let val = if checked { "true" } else { "false" };
+        self.value = val.to_string();
+        self.default_value = val.to_string();
+        self
+    }
+
+    /// Returns true if this field is a checkbox and its value is "true".
+    pub fn is_checked(&self) -> bool {
+        self.value == "true"
+    }
+
+    /// Sets the checked state of a checkbox field.
+    pub fn set_checked(&mut self, checked: bool) {
+        self.value = if checked { "true" } else { "false" }.to_string();
+        self.error = None;
+    }
+
+    /// Toggles the checked state of a checkbox field.
+    pub fn toggle_checked(&mut self) {
+        let new_state = !self.is_checked();
+        self.set_checked(new_state);
     }
 
     /// Sets default value for the field.
@@ -292,7 +339,14 @@ impl FormField {
 
     /// Formats the field's current value for rendering on screen.
     pub fn display_value(&self) -> String {
-        if let Some(ref fmt) = self.format_fn {
+        if self.field_type == FormFieldType::Checkbox {
+            if self.is_checked() {
+                let mark = if crate::theme::is_utf8_supported() { "✓" } else { "X" };
+                format!("[{}] Enabled", mark)
+            } else {
+                "[ ] Disabled".to_string()
+            }
+        } else if let Some(ref fmt) = self.format_fn {
             fmt(&self.value)
         } else {
             self.value.clone()
@@ -320,6 +374,11 @@ impl FormResult {
 
     pub fn get(&self, key: &str) -> Option<&str> {
         self.values.get(key).map(|s| s.as_str())
+    }
+
+    /// Returns boolean value for checkbox fields (true if value == "true").
+    pub fn get_bool(&self, key: &str) -> bool {
+        self.get(key).map(|s| s == "true").unwrap_or(false)
     }
 
     pub fn get_string(&self, key: &str) -> String {
@@ -483,6 +542,7 @@ impl FormModal {
             self.focused_idx = 0;
         }
 
+        let mut scroll_offset: usize = 0;
         let keymap = KeyMap::default();
 
         loop {
@@ -491,6 +551,7 @@ impl FormModal {
                 continue;
             }
 
+            let (_, term_h) = get_terminal_size();
             let width = get_content_width(self.max_width);
             let mut frame = BoxFrame::new(width);
             frame.title = Some((self.title.clone(), false));
@@ -505,8 +566,31 @@ impl FormModal {
                 frame.divider();
             }
 
-            // 4. Render Form Fields
-            for (idx, field) in self.fields.iter().enumerate() {
+            // Calculate visible field budget
+            let overhead = 9 + self.header_rows.len() as u16;
+            let available_rows = (term_h as usize).saturating_sub(overhead as usize);
+            let max_visible = (available_rows / 3).max(2);
+            let visible_count = self.fields.len().min(max_visible);
+
+            if self.focused_idx < scroll_offset {
+                scroll_offset = self.focused_idx;
+            } else if self.focused_idx >= scroll_offset + visible_count {
+                scroll_offset = self.focused_idx + 1 - visible_count;
+            }
+
+            let end_idx = (scroll_offset + visible_count).min(self.fields.len());
+
+            if scroll_offset > 0 {
+                frame.centered_row(
+                    format!("▲  ({} more fields above)", scroll_offset)
+                        .dimmed()
+                        .to_string(),
+                );
+            }
+
+            // 4. Render Form Fields in current viewport
+            for idx in scroll_offset..end_idx {
+                let field = &self.fields[idx];
                 let is_focused = idx == self.focused_idx;
 
                 // Field Label
@@ -524,7 +608,20 @@ impl FormModal {
                 } else {
                     "  ".to_string()
                 };
-                let input_line = if field.value.is_empty() {
+                let input_line = if field.field_type == FormFieldType::Checkbox {
+                    let mark = if crate::theme::is_utf8_supported() { "✓" } else { "X" };
+                    if field.is_checked() {
+                        if is_focused {
+                            format!("{}{} {}", prefix, format!("[{}]", mark).green().bold(), "Enabled".green().bold())
+                        } else {
+                            format!("{}{} {}", prefix, format!("[{}]", mark).green(), "Enabled".green())
+                        }
+                    } else if is_focused {
+                        format!("{}{} {}", prefix, "[ ]".white().bold(), "Disabled".white())
+                    } else {
+                        format!("{}{} {}", prefix, "[ ]".dimmed(), "Disabled".dimmed())
+                    }
+                } else if field.value.is_empty() {
                     if !field.placeholder.is_empty() {
                         format!("{}{}", prefix, field.placeholder.dimmed())
                     } else if is_focused {
@@ -560,21 +657,37 @@ impl FormModal {
                 }
 
                 // Divider or spacing between fields
-                if idx + 1 < self.fields.len() {
+                if idx + 1 < end_idx {
                     frame.empty_row();
                 }
             }
 
+            if end_idx < self.fields.len() {
+                frame.centered_row(
+                    format!("▼  ({} more fields below)", self.fields.len() - end_idx)
+                        .dimmed()
+                        .to_string(),
+                );
+            }
+
             // 5. Footer Help
+            let is_checkbox_focused = self
+                .fields
+                .get(self.focused_idx)
+                .map(|f| f.field_type == FormFieldType::Checkbox)
+                .unwrap_or(false);
+
             let shortcuts = self.shortcuts.clone().unwrap_or_else(|| {
                 if let Some(ref custom_footer) = self.footer_help {
                     crate::shortcuts::Shortcuts::from(custom_footer.as_str())
                 } else {
-                    crate::shortcuts::Shortcuts::new()
+                    let mut sc = crate::shortcuts::Shortcuts::new()
                         .add("Tab/↓", "Next")
-                        .add("Shift+Tab/↑", "Prev")
-                        .save()
-                        .cancel()
+                        .add("Shift+Tab/↑", "Prev");
+                    if is_checkbox_focused {
+                        sc = sc.add("Space", "Toggle");
+                    }
+                    sc.save().cancel()
                 }
             });
             frame.shortcuts(&shortcuts);
@@ -611,6 +724,11 @@ impl FormModal {
                         KeyAction::Quit => {
                             clean_exit();
                         }
+                        KeyAction::Save => {
+                            if let Some(res) = self.validate_and_collect() {
+                                return Ok(Some(res));
+                            }
+                        }
                         KeyAction::Up => {
                             if self.focused_idx > 0 {
                                 self.focused_idx -= 1;
@@ -627,14 +745,18 @@ impl FormModal {
                         }
                         KeyAction::Left => {
                             if let Some(f) = self.fields.get_mut(self.focused_idx) {
-                                if f.cursor > 0 {
+                                if f.field_type == FormFieldType::Checkbox {
+                                    f.toggle_checked();
+                                } else if f.cursor > 0 {
                                     f.cursor -= 1;
                                 }
                             }
                         }
                         KeyAction::Right => {
                             if let Some(f) = self.fields.get_mut(self.focused_idx) {
-                                if f.cursor < f.value.chars().count() {
+                                if f.field_type == FormFieldType::Checkbox {
+                                    f.toggle_checked();
+                                } else if f.cursor < f.value.chars().count() {
                                     f.cursor += 1;
                                 }
                             }
@@ -706,7 +828,17 @@ impl FormModal {
                         }
                         KeyAction::Hotkey(c) => {
                             if let Some(f) = self.fields.get_mut(self.focused_idx) {
-                                f.insert_char(c);
+                                if f.field_type == FormFieldType::Checkbox {
+                                    if c == ' ' || c == 'x' || c == 'X' {
+                                        f.toggle_checked();
+                                    } else if c == 't' || c == 'T' || c == '1' {
+                                        f.set_checked(true);
+                                    } else if c == 'f' || c == 'F' || c == '0' {
+                                        f.set_checked(false);
+                                    }
+                                } else {
+                                    f.insert_char(c);
+                                }
                             }
                         }
                         _ => {}
@@ -802,5 +934,26 @@ mod tests {
         let res = form.validate_and_collect().expect("should validate");
         assert_eq!(res.get_string("alias"), "my-host");
         assert_eq!(res.get_u16("port"), Some(22));
+    }
+
+    #[test]
+    fn test_form_field_checkbox() {
+        let mut field = FormField::checkbox("online_mode", "Online Mode");
+        assert!(!field.is_checked());
+        assert_eq!(field.value, "false");
+        assert_eq!(field.display_value(), "[ ] Disabled");
+
+        field.toggle_checked();
+        assert!(field.is_checked());
+        assert_eq!(field.value, "true");
+        assert!(field.display_value().contains("Enabled"));
+
+        field.set_checked(false);
+        assert!(!field.is_checked());
+
+        let mut form = FormModal::new("CHECKBOX FORM")
+            .with_field(FormField::checkbox_with_default("white_list", "Whitelist", true));
+        let res = form.validate_and_collect().expect("valid");
+        assert!(res.get_bool("white_list"));
     }
 }
