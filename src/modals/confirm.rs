@@ -199,8 +199,11 @@ impl ConfirmModal {
                             KeyAction::Cancel => {
                                 return Ok(ConfirmOutcome::Cancelled);
                             }
-                            KeyAction::Left | KeyAction::Right => {
-                                selected_yes = !selected_yes;
+                            KeyAction::Left => {
+                                selected_yes = true;
+                            }
+                            KeyAction::Right => {
+                                selected_yes = false;
                             }
                             KeyAction::Submit => {
                                 return if selected_yes {

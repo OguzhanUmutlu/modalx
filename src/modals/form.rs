@@ -447,10 +447,11 @@ impl FormModal {
                 let is_focused = idx == self.focused_idx;
 
                 // Field Label
+                let trimmed_label = field.label.trim_end_matches(':').trim();
                 let label_str = if is_focused {
-                    format!("{}:", field.label).cyan().bold().to_string()
+                    format!("{}:", trimmed_label).cyan().bold().to_string()
                 } else {
-                    format!("{}:", field.label).dimmed().to_string()
+                    format!("{}:", trimmed_label).dimmed().to_string()
                 };
                 frame.row(label_str);
 

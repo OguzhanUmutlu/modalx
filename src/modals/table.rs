@@ -332,12 +332,12 @@ impl TableModal {
                             KeyAction::End => {
                                 *selected_idx = self.rows.len().saturating_sub(1);
                             }
-                            KeyAction::Submit if self.selectable => {
+                            KeyAction::Submit | KeyAction::Right if self.selectable => {
                                 if !self.rows.is_empty() {
                                     return Ok(TableOutcome::Selected(*selected_idx));
                                 }
                             }
-                            KeyAction::Cancel => {
+                            KeyAction::Cancel | KeyAction::Left => {
                                 return Ok(TableOutcome::Cancelled);
                             }
                             _ => {}

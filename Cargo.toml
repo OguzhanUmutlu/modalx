@@ -14,3 +14,4 @@ categories = ["command-line-interface", "user-interfaces"]
 crossterm = "0.29"
 colored = "3.0"
 thiserror = "2.0"
+unicode-width = "0.2"

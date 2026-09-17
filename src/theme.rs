@@ -1,4 +1,5 @@
 use colored::Colorize;
+use unicode_width::UnicodeWidthStr;
 
 pub const BORDER_COLOR: &str = "\x1B[38;5;240m";
 pub const RESET: &str = "\x1B[0m";
@@ -32,9 +33,9 @@ pub fn strip_ansi(s: &str) -> String {
     out
 }
 
-/// Calculates the visible character length of a string ignoring ANSI escapes.
+/// Calculates the visible terminal display column width of a string ignoring ANSI escapes.
 pub fn visible_len(s: &str) -> usize {
-    strip_ansi(s).chars().count()
+    strip_ansi(s).width()
 }
 
 /// Generates a top border: ╭────────────────╮ or +----------------+

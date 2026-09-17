@@ -164,7 +164,7 @@ impl BoxFrame {
         }
 
         let clean = strip_ansi(content);
-        let char_count = clean.chars().count();
+        let char_count = visible_len(&clean);
 
         if char_count >= inner_width {
             let truncated = truncate_ansi(content, inner_width);
@@ -206,7 +206,7 @@ impl BoxFrame {
         }
 
         let clean = strip_ansi(content);
-        let total_content_len = clean.chars().count() + indent;
+        let total_content_len = visible_len(&clean) + indent;
 
         if total_content_len >= inner_width {
             let available = inner_width.saturating_sub(indent);
@@ -251,7 +251,7 @@ impl BoxFrame {
         }
 
         let clean = strip_ansi(content);
-        let char_count = clean.chars().count();
+        let char_count = visible_len(&clean);
 
         if char_count >= inner_width {
             let truncated = truncate_ansi(content, inner_width);
@@ -330,7 +330,7 @@ impl BoxFrame {
                 if let Some(ref bc) = bc_text {
                     let inner_w = w.saturating_sub(2);
                     let clean = strip_ansi(bc);
-                    let len = clean.chars().count();
+                    let len = visible_len(&clean);
                     let (pad_l, pad_r) = if len < inner_w {
                         let rem = inner_w - len;
                         (rem / 2, rem - rem / 2)

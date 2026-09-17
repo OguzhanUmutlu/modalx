@@ -434,7 +434,7 @@ impl SelectModal {
                         KeyAction::End => {
                             *selected_idx = self.entries.len().saturating_sub(1);
                         }
-                        KeyAction::Submit => {
+                        KeyAction::Submit | KeyAction::Right => {
                             if !self.entries.is_empty() {
                                 return Ok(SelectOutcome::Selected(*selected_idx));
                             }
@@ -444,7 +444,7 @@ impl SelectModal {
                                 return Ok(SelectOutcome::Toggled(*selected_idx));
                             }
                         }
-                        KeyAction::Cancel => {
+                        KeyAction::Cancel | KeyAction::Left => {
                             return Ok(SelectOutcome::Cancelled);
                         }
                         KeyAction::Hotkey(c) => {
