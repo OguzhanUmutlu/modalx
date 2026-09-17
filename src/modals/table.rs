@@ -77,6 +77,7 @@ pub struct TableModal {
     pub max_width: u16,
     pub footer_help: Option<String>,
     pub shortcuts: Option<crate::shortcuts::Shortcuts>,
+    pub wrap_around: bool,
 }
 
 impl TableModal {
@@ -91,6 +92,7 @@ impl TableModal {
             max_width: 0,
             footer_help: None,
             shortcuts: None,
+            wrap_around: false,
         }
     }
 
@@ -139,6 +141,12 @@ impl TableModal {
     /// Sets custom bottom footer shortcuts.
     pub fn with_shortcuts(mut self, shortcuts: impl Into<crate::shortcuts::Shortcuts>) -> Self {
         self.shortcuts = Some(shortcuts.into());
+        self
+    }
+
+    /// Sets whether arrow key navigation wraps around from top to bottom and bottom to top.
+    pub fn with_wrap_around(mut self, wrap_around: bool) -> Self {
+        self.wrap_around = wrap_around;
         self
     }
 
@@ -305,7 +313,7 @@ impl TableModal {
                                 if !self.rows.is_empty() {
                                     if *selected_idx > 0 {
                                         *selected_idx -= 1;
-                                    } else {
+                                    } else if self.wrap_around {
                                         *selected_idx = self.rows.len().saturating_sub(1);
                                     }
                                 }
@@ -314,7 +322,7 @@ impl TableModal {
                                 if !self.rows.is_empty() {
                                     if *selected_idx + 1 < self.rows.len() {
                                         *selected_idx += 1;
-                                    } else {
+                                    } else if self.wrap_around {
                                         *selected_idx = 0;
                                     }
                                 }
@@ -382,5 +390,14 @@ mod tests {
         assert!(modal.columns[2].align_right);
         assert_eq!(modal.rows.len(), 2);
         assert!(modal.selectable);
+    }
+
+    #[test]
+    fn test_table_modal_wrap_around() {
+        let modal_default = TableModal::new("INSTANCES");
+        assert!(!modal_default.wrap_around);
+
+        let modal_wrapped = TableModal::new("INSTANCES").with_wrap_around(true);
+        assert!(modal_wrapped.wrap_around);
     }
 }

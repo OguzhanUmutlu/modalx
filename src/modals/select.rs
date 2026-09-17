@@ -45,6 +45,7 @@ pub struct SelectModal {
     pub footer_help: Option<String>,
     pub shortcuts: Option<crate::shortcuts::Shortcuts>,
     pub max_width: u16,
+    pub wrap_around: bool,
 }
 
 impl Default for SelectModal {
@@ -70,6 +71,7 @@ impl SelectModal {
             footer_help: None,
             shortcuts: None,
             max_width: 0,
+            wrap_around: false,
         }
     }
 
@@ -231,6 +233,12 @@ impl SelectModal {
     /// Sets maximum desired box content width (defaults to 80).
     pub fn with_max_width(mut self, width: u16) -> Self {
         self.max_width = width;
+        self
+    }
+
+    /// Sets whether arrow key navigation wraps around from top to bottom and bottom to top.
+    pub fn with_wrap_around(mut self, wrap_around: bool) -> Self {
+        self.wrap_around = wrap_around;
         self
     }
 
@@ -407,7 +415,7 @@ impl SelectModal {
                             if !self.entries.is_empty() {
                                 if *selected_idx > 0 {
                                     *selected_idx -= 1;
-                                } else {
+                                } else if self.wrap_around {
                                     *selected_idx = self.entries.len().saturating_sub(1);
                                 }
                             }
@@ -416,7 +424,7 @@ impl SelectModal {
                             if !self.entries.is_empty() {
                                 if *selected_idx + 1 < self.entries.len() {
                                     *selected_idx += 1;
-                                } else {
+                                } else if self.wrap_around {
                                     *selected_idx = 0;
                                 }
                             }
@@ -634,5 +642,14 @@ mod tests {
             vec!["Host: root@127.0.0.1:22".to_string()]
         );
         assert_eq!(modal.entries.len(), 1);
+    }
+
+    #[test]
+    fn test_select_modal_wrap_around() {
+        let modal_default = SelectModal::new();
+        assert!(!modal_default.wrap_around);
+
+        let modal_wrapped = SelectModal::new().with_wrap_around(true);
+        assert!(modal_wrapped.wrap_around);
     }
 }
