@@ -66,6 +66,22 @@ pub fn is_alt_screen_active() -> bool {
     ALT_SCREEN_DEPTH.load(Ordering::SeqCst) > 0
 }
 
+/// Re-asserts the alternate screen buffer if an active AltScreenGuard exists.
+/// This should be called after returning from external processes, child PTY sessions,
+/// or SSH connections that may have emitted LeaveAlternateScreen or corrupted terminal modes.
+pub fn restore_alt_screen_if_active() {
+    if is_alt_screen_active() {
+        let _ = execute!(
+            io::stdout(),
+            EnterAlternateScreen,
+            Hide,
+            Clear(ClearType::All),
+            crossterm::cursor::MoveTo(0, 0)
+        );
+        let _ = io::stdout().flush();
+    }
+}
+
 impl AltScreenGuard {
     pub fn enter() -> Self {
         init_terminal_panic_hook();
@@ -202,5 +218,22 @@ mod tests {
     fn test_content_width_clamping() {
         let width = get_content_width(80);
         assert!(width >= MIN_TERM_WIDTH as usize);
+    }
+
+    #[test]
+    fn test_alt_screen_guard_nesting_and_restoration() {
+        assert!(!is_alt_screen_active());
+        {
+            let _g1 = AltScreenGuard::enter();
+            assert!(is_alt_screen_active());
+            {
+                let _g2 = AltScreenGuard::enter();
+                assert!(is_alt_screen_active());
+                restore_alt_screen_if_active();
+                assert!(is_alt_screen_active());
+            }
+            assert!(is_alt_screen_active());
+        }
+        assert!(!is_alt_screen_active());
     }
 }
