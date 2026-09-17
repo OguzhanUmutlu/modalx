@@ -2,7 +2,6 @@ use colored::Colorize;
 use crossterm::{
     cursor::{Hide, MoveTo},
     queue,
-    terminal::{Clear, ClearType},
 };
 use std::io::{self, Write};
 
@@ -440,14 +439,22 @@ impl BoxFrame {
             0
         };
 
-        queue!(stdout, Hide, MoveTo(0, 0))?;
-        for _ in 0..top_padding {
-            write!(stdout, "\x1B[K\r\n")?;
+        queue!(stdout, Hide)?;
+        for y in 0..top_padding {
+            queue!(stdout, MoveTo(0, y))?;
+            write!(stdout, "\x1B[K")?;
         }
-        for line in lines {
-            write!(stdout, "{}\x1B[K\r\n", line)?;
+        for (i, line) in lines.iter().enumerate() {
+            let y = top_padding + i as u16;
+            if y < term_h {
+                queue!(stdout, MoveTo(0, y))?;
+                write!(stdout, "{}\x1B[K", line)?;
+            }
         }
-        queue!(stdout, Clear(ClearType::FromCursorDown), Hide)?;
+        for y in (top_padding + box_height)..term_h {
+            queue!(stdout, MoveTo(0, y))?;
+            write!(stdout, "\x1B[K")?;
+        }
         stdout.flush()?;
         Ok(())
     }

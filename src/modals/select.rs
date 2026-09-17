@@ -12,7 +12,7 @@ use crate::frame::BoxFrame;
 use crate::keys::{KeyAction, KeyMap};
 use crate::section::{FieldSection, ModalSection, SelectItem};
 use crate::terminal::{
-    clean_exit, get_content_width, get_terminal_size, is_terminal_too_small, wait_for_valid_size,
+    clean_exit, get_terminal_size, is_terminal_too_small, wait_for_valid_size,
 };
 use crate::text_flow::{wrap_delimited_string, wrap_words};
 use crate::theme::strip_ansi;
@@ -242,6 +242,199 @@ impl SelectModal {
         self
     }
 
+    /// Constructs the responsive `BoxFrame` and calculates the dynamic item `viewport_size`
+    /// based on terminal dimensions and strict vertical height prioritization.
+    ///
+    /// Fixed structural elements (borders, title, breadcrumbs, dividers, metadata headers,
+    /// and footer shortcuts) have highest priority. The items list has lowest priority and
+    /// shrinks dynamically to fit within `term_h`.
+    pub fn build_frame(
+        &self,
+        term_w: u16,
+        term_h: u16,
+        selected_idx: usize,
+        scroll_offset: &mut usize,
+    ) -> (BoxFrame, usize) {
+        let available = (term_w as usize).saturating_sub(2);
+        let width = if self.max_width == 0 || self.max_width <= 80 {
+            available.max(crate::terminal::MIN_TERM_WIDTH as usize)
+        } else {
+            available
+                .min(self.max_width as usize)
+                .max(crate::terminal::MIN_TERM_WIDTH as usize)
+        };
+        let available_content_width = width.saturating_sub(6);
+
+        // 1. Build metadata rows from both sections and legacy header_rows
+        let mut rendered_metadata_rows: Vec<String> = Vec::new();
+
+        for sec in &self.sections {
+            match sec {
+                ModalSection::Fields(ref fs) => {
+                    rendered_metadata_rows.extend(fs.render(available_content_width));
+                }
+                ModalSection::Text(ref ts) => {
+                    rendered_metadata_rows.extend(ts.render(available_content_width));
+                }
+                ModalSection::Custom(ref lines) => {
+                    rendered_metadata_rows.extend(lines.clone());
+                }
+                _ => {}
+            }
+        }
+
+        for row in &self.header_rows {
+            if row.contains(" | ") {
+                rendered_metadata_rows.extend(wrap_delimited_string(
+                    row,
+                    " | ",
+                    available_content_width,
+                ));
+            } else if strip_ansi(row).chars().count() > available_content_width {
+                rendered_metadata_rows.extend(wrap_words(row, available_content_width));
+            } else {
+                rendered_metadata_rows.push(row.clone());
+            }
+        }
+
+        // 2. Title and breadcrumbs
+        let effective_title = self.title.clone().or_else(|| {
+            let crumbs = crate::nav::get_breadcrumbs();
+            if crumbs.len() > 1 {
+                crumbs.last().map(|c| (c.to_uppercase(), false))
+            } else {
+                None
+            }
+        });
+
+        let has_breadcrumbs = self.show_breadcrumbs
+            && effective_title.as_ref().map(|(_, err)| !*err).unwrap_or(false)
+            && (self.breadcrumbs.is_some() || crate::nav::get_breadcrumbs().len() > 1);
+
+        let title_overhead = if effective_title.is_some() {
+            // box_title (1) + optional breadcrumbs (1) + divider (1)
+            2 + if has_breadcrumbs { 1 } else { 0 }
+        } else {
+            0
+        };
+
+        // 3. Footer shortcuts / help text
+        let shortcuts = self.shortcuts.clone().unwrap_or_else(|| {
+            if let Some(ref custom_footer) = self.footer_help {
+                crate::shortcuts::Shortcuts::from(custom_footer.as_str())
+            } else {
+                let mut sc = crate::shortcuts::Shortcuts::new().move_selection();
+                if self.allow_toggle {
+                    sc = sc.toggle().confirm().cancel();
+                } else {
+                    sc = sc.select().back();
+                }
+                sc.exit_if(self.allow_quit_on_q)
+            }
+        });
+
+        let footer_button_items = shortcuts.to_button_items();
+        let footer_lines_count = if !footer_button_items.is_empty() {
+            let inner_w = width.saturating_sub(2);
+            let wrapped = crate::text_flow::wrap_button_items(
+                &footer_button_items,
+                "  |  ",
+                inner_w,
+                true,
+            );
+            1 + wrapped.len() // 1 divider + wrapped rows
+        } else {
+            0
+        };
+
+        // 4. Fixed vertical overhead (High Priority)
+        let fixed_overhead = 1 // top border
+            + title_overhead
+            + rendered_metadata_rows.len()
+            + if !rendered_metadata_rows.is_empty() { 1 } else { 0 } // metadata divider
+            + footer_lines_count
+            + 1; // bottom border
+
+        // 5. Dynamic items budget (Lowest Priority)
+        let available_for_items = (term_h as usize).saturating_sub(fixed_overhead);
+
+        let viewport_size = if self.entries.is_empty() {
+            0
+        } else if self.entries.len() <= available_for_items {
+            // All entries fit without scrolling
+            self.entries.len()
+        } else {
+            // Paginated: reserve 2 rows for [▲ ...] and [▼ ...] indicators
+            available_for_items.saturating_sub(2).max(1)
+        };
+
+        // 6. Keep selected index visible within the viewport
+        if selected_idx < *scroll_offset {
+            *scroll_offset = selected_idx;
+        } else if viewport_size > 0 && selected_idx >= *scroll_offset + viewport_size {
+            *scroll_offset = selected_idx - viewport_size + 1;
+        }
+        if viewport_size > 0 && *scroll_offset + viewport_size > self.entries.len() {
+            *scroll_offset = self.entries.len().saturating_sub(viewport_size);
+        }
+        if selected_idx < *scroll_offset {
+            *scroll_offset = selected_idx;
+        }
+
+        // 7. Build BoxFrame
+        let mut frame = BoxFrame::new(width);
+        if let Some((ref title, is_err)) = effective_title {
+            frame.title = Some((title.clone(), is_err));
+        }
+        if let Some(ref bc) = self.breadcrumbs {
+            frame.breadcrumbs = Some(bc.clone());
+        }
+        frame.show_breadcrumbs = self.show_breadcrumbs;
+
+        for row in &rendered_metadata_rows {
+            frame.row(row);
+        }
+        if !rendered_metadata_rows.is_empty() {
+            frame.divider();
+        }
+
+        if *scroll_offset > 0 {
+            frame.row(
+                format!("[▲ {} more items above]", *scroll_offset)
+                    .dimmed()
+                    .to_string(),
+            );
+        }
+
+        let end_idx = self.entries.len().min(*scroll_offset + viewport_size);
+        for (local_i, entry) in self.entries[*scroll_offset..end_idx].iter().enumerate() {
+            let abs_i = *scroll_offset + local_i;
+            let badge = format!("[{}]", entry.hotkey);
+            let row_str = if abs_i == selected_idx {
+                format!(
+                    "> {:<5} {}",
+                    badge.cyan().bold(),
+                    entry.label.white().bold()
+                )
+            } else {
+                format!("  {:<5} {}", badge.cyan(), entry.label)
+            };
+            frame.row(row_str);
+        }
+
+        if end_idx < self.entries.len() {
+            frame.row(
+                format!("[▼ {} more items below]", self.entries.len() - end_idx)
+                    .dimmed()
+                    .to_string(),
+            );
+        }
+
+        frame.shortcuts(&shortcuts);
+
+        (frame, viewport_size)
+    }
+
     /// Executes the interactive menu event loop, updating `selected_idx`.
     pub fn run(&self, selected_idx: &mut usize) -> Result<SelectOutcome> {
         let mut stdout = io::stdout();
@@ -260,147 +453,9 @@ impl SelectModal {
                 continue;
             }
 
-            let (_, term_h) = get_terminal_size();
-            let width = get_content_width(self.max_width);
-            let available_content_width = width.saturating_sub(6);
-
-            // Dynamically build metadata rows from both sections and legacy header_rows,
-            // wrapping any field groups or delimited lines to fit within available_content_width.
-            let mut rendered_metadata_rows: Vec<String> = Vec::new();
-
-            for sec in &self.sections {
-                match sec {
-                    ModalSection::Fields(ref fs) => {
-                        rendered_metadata_rows.extend(fs.render(available_content_width));
-                    }
-                    ModalSection::Text(ref ts) => {
-                        rendered_metadata_rows.extend(ts.render(available_content_width));
-                    }
-                    ModalSection::Custom(ref lines) => {
-                        rendered_metadata_rows.extend(lines.clone());
-                    }
-                    _ => {}
-                }
-            }
-
-            for row in &self.header_rows {
-                if row.contains(" | ") {
-                    rendered_metadata_rows.extend(wrap_delimited_string(
-                        row,
-                        " | ",
-                        available_content_width,
-                    ));
-                } else if strip_ansi(row).chars().count() > available_content_width {
-                    rendered_metadata_rows.extend(wrap_words(row, available_content_width));
-                } else {
-                    rendered_metadata_rows.push(row.clone());
-                }
-            }
-
-            let effective_title = self.title.clone().or_else(|| {
-                let crumbs = crate::nav::get_breadcrumbs();
-                if crumbs.len() > 1 {
-                    crumbs.last().map(|c| (c.to_uppercase(), false))
-                } else {
-                    None
-                }
-            });
-
-            // Overhead: top border (1) + title/divider (2 if present) + breadcrumbs (1 if present)
-            // + rendered metadata rows + divider (1 if metadata present) + footer/bottom (3)
-            let overhead = 1
-                + if effective_title.is_some() { 2 } else { 0 }
-                + if self.show_breadcrumbs
-                    && (self.breadcrumbs.is_some() || crate::nav::NavGuard::has_crumbs())
-                {
-                    1
-                } else {
-                    0
-                }
-                + rendered_metadata_rows.len()
-                + if !rendered_metadata_rows.is_empty() {
-                    1
-                } else {
-                    0
-                }
-                + 3;
-
-            let viewport_size = (term_h as usize).saturating_sub(overhead).max(3);
-
-            // Keep selected index visible
-            if *selected_idx < scroll_offset {
-                scroll_offset = *selected_idx;
-            } else if *selected_idx >= scroll_offset + viewport_size {
-                scroll_offset = *selected_idx - viewport_size + 1;
-            }
-            if scroll_offset + viewport_size > self.entries.len() {
-                scroll_offset = self.entries.len().saturating_sub(viewport_size);
-            }
-
-            // Build BoxFrame
-            let mut frame = BoxFrame::new(width);
-            if let Some((ref title, is_err)) = effective_title {
-                frame.title = Some((title.clone(), is_err));
-            }
-            if let Some(ref bc) = self.breadcrumbs {
-                frame.breadcrumbs = Some(bc.clone());
-            }
-            frame.show_breadcrumbs = self.show_breadcrumbs;
-
-            for row in &rendered_metadata_rows {
-                frame.row(row);
-            }
-            if !rendered_metadata_rows.is_empty() {
-                frame.divider();
-            }
-
-            if scroll_offset > 0 {
-                frame.row(
-                    format!("[▲ {} more items above]", scroll_offset)
-                        .dimmed()
-                        .to_string(),
-                );
-            }
-
-            let end_idx = self.entries.len().min(scroll_offset + viewport_size);
-            for (local_i, entry) in self.entries[scroll_offset..end_idx].iter().enumerate() {
-                let abs_i = scroll_offset + local_i;
-                let badge = format!("[{}]", entry.hotkey);
-                let row_str = if abs_i == *selected_idx {
-                    format!(
-                        "> {:<5} {}",
-                        badge.cyan().bold(),
-                        entry.label.white().bold()
-                    )
-                } else {
-                    format!("  {:<5} {}", badge.cyan(), entry.label)
-                };
-                frame.row(row_str);
-            }
-
-            if end_idx < self.entries.len() {
-                frame.row(
-                    format!("[▼ {} more items below]", self.entries.len() - end_idx)
-                        .dimmed()
-                        .to_string(),
-                );
-            }
-
-            let shortcuts = self.shortcuts.clone().unwrap_or_else(|| {
-                if let Some(ref custom_footer) = self.footer_help {
-                    crate::shortcuts::Shortcuts::from(custom_footer.as_str())
-                } else {
-                    let mut sc = crate::shortcuts::Shortcuts::new().move_selection();
-                    if self.allow_toggle {
-                        sc = sc.toggle().confirm().cancel();
-                    } else {
-                        sc = sc.select().back();
-                    }
-                    sc.exit_if(self.allow_quit_on_q)
-                }
-            });
-            frame.shortcuts(&shortcuts);
-
+            let (term_w, term_h) = get_terminal_size();
+            let (frame, viewport_size) =
+                self.build_frame(term_w, term_h, *selected_idx, &mut scroll_offset);
             frame.render(&mut stdout)?;
 
             match event::read()? {
@@ -430,10 +485,10 @@ impl SelectModal {
                             }
                         }
                         KeyAction::PageUp => {
-                            *selected_idx = selected_idx.saturating_sub(viewport_size);
+                            *selected_idx = selected_idx.saturating_sub(viewport_size.max(1));
                         }
                         KeyAction::PageDown => {
-                            *selected_idx = (*selected_idx + viewport_size)
+                            *selected_idx = (*selected_idx + viewport_size.max(1))
                                 .min(self.entries.len().saturating_sub(1));
                         }
                         KeyAction::Home => {
@@ -651,5 +706,113 @@ mod tests {
 
         let modal_wrapped = SelectModal::new().with_wrap_around(true);
         assert!(modal_wrapped.wrap_around);
+    }
+
+    #[test]
+    fn test_select_modal_dynamic_height_budget_standard_term() {
+        // Reproduce the wizard scenario: 17 items on standard 80x24 terminal
+        let mut modal = SelectModal::new()
+            .with_title("STEP 3/6: SELECT SERVER SOFTWARE", false)
+            .with_header_row("Select the server software implementation:");
+
+        for i in 0..17 {
+            modal = modal.item(format!("{}", i + 1), format!("Software Option {}", i + 1));
+        }
+
+        let mut scroll_offset = 0;
+        let (frame, viewport_size) = modal.build_frame(80, 24, 0, &mut scroll_offset);
+        let output = frame.render_to_string();
+        let lines: Vec<&str> = output.lines().collect();
+
+        // Must never exceed terminal height of 24
+        assert!(
+            lines.len() <= 24,
+            "Rendered lines ({}) exceeded terminal height 24",
+            lines.len()
+        );
+        // Top border and title must always be present at top
+        assert!(lines[0].contains('╭') || lines[0].contains('+'));
+        assert!(lines[1].contains("STEP 3/6: SELECT SERVER SOFTWARE"));
+        // Header row must be present
+        assert!(lines.iter().any(|l| l.contains("Select the server software implementation:")));
+        // Viewport size dynamically shrunk to fit remaining space
+        assert!(viewport_size > 0 && viewport_size < 17);
+    }
+
+    #[test]
+    fn test_select_modal_dynamic_height_budget_constrained_term() {
+        // Test constrained heights (14 and 16 rows)
+        let mut modal = SelectModal::new()
+            .with_title("SOFTWARE SELECTION", false)
+            .with_header_row("Select an option:");
+
+        for i in 0..20 {
+            modal = modal.item(format!("{}", i + 1), format!("Item {}", i + 1));
+        }
+
+        for term_h in [14, 16, 20] {
+            let mut scroll_offset = 0;
+            let (frame, viewport_size) = modal.build_frame(80, term_h, 0, &mut scroll_offset);
+            let output = frame.render_to_string();
+            let lines: Vec<&str> = output.lines().collect();
+
+            assert!(
+                lines.len() <= term_h as usize,
+                "Lines ({}) exceeded term_h ({})",
+                lines.len(),
+                term_h
+            );
+            assert!(lines[0].contains('╭') || lines[0].contains('+'));
+            assert!(lines[1].contains("SOFTWARE SELECTION"));
+            assert!(viewport_size >= 1);
+        }
+    }
+
+    #[test]
+    fn test_select_modal_scrolling_stays_within_bounds() {
+        // Verify scrolling through all items never exceeds term_h at any scroll position
+        let mut modal = SelectModal::new()
+            .with_title("SELECTION TEST", false)
+            .with_header_row("Header row info");
+
+        for i in 0..20 {
+            modal = modal.item(format!("{}", i + 1), format!("Item {}", i + 1));
+        }
+
+        let term_h = 24;
+        let mut scroll_offset = 0;
+        for sel in 0..20 {
+            let (frame, _) = modal.build_frame(80, term_h, sel, &mut scroll_offset);
+            let output = frame.render_to_string();
+            let lines: Vec<&str> = output.lines().collect();
+
+            assert!(
+                lines.len() <= term_h as usize,
+                "At sel {} scroll_offset {}, lines ({}) exceeded term_h ({})",
+                sel,
+                scroll_offset,
+                lines.len(),
+                term_h
+            );
+            assert!(lines[0].contains('╭') || lines[0].contains('+'));
+            assert!(lines[1].contains("SELECTION TEST"));
+        }
+    }
+
+    #[test]
+    fn test_select_modal_all_items_fit_no_scroll_indicators() {
+        // When entries fit within height, no scroll indicators are shown
+        let modal = SelectModal::new()
+            .with_title("SHORT MENU", false)
+            .item("1", "First")
+            .item("2", "Second");
+
+        let mut scroll_offset = 0;
+        let (frame, viewport_size) = modal.build_frame(80, 24, 0, &mut scroll_offset);
+        let output = frame.render_to_string();
+
+        assert_eq!(viewport_size, 2);
+        assert!(!output.contains("more items above"));
+        assert!(!output.contains("more items below"));
     }
 }
