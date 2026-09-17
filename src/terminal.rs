@@ -52,8 +52,10 @@ pub fn clean_exit() -> ! {
 
 /// Restores normal terminal state: disables raw mode, leaves alternate screen, and unhides the cursor.
 pub fn restore_terminal() {
+    ALT_SCREEN_DEPTH.store(0, Ordering::SeqCst);
     let _ = disable_raw_mode();
     let _ = execute!(io::stdout(), LeaveAlternateScreen, Show);
+    let _ = io::stdout().flush();
 }
 
 /// Re-entrant RAII guard for the terminal alternate screen.
