@@ -40,6 +40,7 @@ A responsive, declarative, box-encapsulated Terminal User Interface (TUI) and mo
   - `InfoModal`: Multi-line scrollable dialogs with contextual shortcut bars that omit scroll hints when content fits the viewport.
   - `TableModal`: Multi-column tabular data displays with column alignment (Left, Center, Right) and row selection.
   - `WaitingModal`: In-place progress monitors with smooth animated braille spinners and multi-step checklists.
+  - `ProgressModal`: High-performance transfer and download progress modal with sub-character smooth Unicode blocks (`▏▎▍▌▋▊▉█`), exponential-smoothing speed telemetry, ETA estimation, and double-buffered box frame rendering.
 - **Dynamic Shortcuts Engine**: Contextual shortcut bar (`Shortcuts`, `ShortcutBar`) with automatic deduction and formatted bracketed key hints.
 - **RAII Terminal Safety**: Process-wide panic hook ensuring raw mode is disabled and cursor visibility is restored on unexpected exits.
 
@@ -208,6 +209,35 @@ fn main() -> modalx::Result<()> {
 }
 ```
 
+### 6. Transfer & Download Progress (`ProgressModal`)
+
+```rust
+use modalx::prelude::*;
+use std::io;
+
+fn main() -> modalx::Result<()> {
+    let mut stdout = io::stdout();
+    let total_bytes: u64 = 64 * 1024 * 1024; // 64 MB
+
+    let mut modal = ProgressModal::new(
+        "DOWNLOADING ARTIFACTS",
+        "Fetching distribution archive...",
+        total_bytes,
+    )
+    .with_step("Verify package signature", true)
+    .with_step("Stream binary chunks", false);
+
+    modal.render_forced(&mut stdout)?;
+
+    // Incrementally update progress during streaming
+    modal.update(32 * 1024 * 1024);
+    modal.render(&mut stdout)?;
+
+    modal.finish("Download completed successfully!", &mut stdout)?;
+    Ok(())
+}
+```
+
 ---
 
 ## Examples
@@ -229,6 +259,9 @@ cargo run --example data_table
 
 # Multi-step animated progress spinner
 cargo run --example progress_spinner
+
+# Real-time download progress bar with speed and ETA
+cargo run --example download_progress
 ```
 
 ---

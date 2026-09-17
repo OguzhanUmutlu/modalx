@@ -15,6 +15,7 @@ pub struct WaitingModal {
     pub steps: Vec<(String, bool)>,
     pub max_width: u16,
     pub shortcuts: Option<crate::shortcuts::Shortcuts>,
+    pub progress: Option<crate::modals::progress::ProgressBar>,
 }
 
 impl WaitingModal {
@@ -26,6 +27,22 @@ impl WaitingModal {
             steps: Vec::new(),
             max_width: 0,
             shortcuts: None,
+            progress: None,
+        }
+    }
+
+    /// Adds an embedded progress bar.
+    pub fn with_progress(mut self, current: u64, total: u64) -> Self {
+        let mut pb = crate::modals::progress::ProgressBar::new(total);
+        pb.set_position(current);
+        self.progress = Some(pb);
+        self
+    }
+
+    /// Updates current progress if a progress bar is attached.
+    pub fn update_progress(&mut self, current: u64) {
+        if let Some(ref mut pb) = self.progress {
+            pb.set_position(current);
         }
     }
 
@@ -62,6 +79,20 @@ impl WaitingModal {
         );
         frame.row(main_line);
 
+        if let Some(ref pb) = self.progress {
+            let inner_width = width.saturating_sub(4);
+            let bar_width = inner_width.saturating_sub(10).clamp(20, 48);
+            let bar_visual = pb.render_bar(bar_width, spinner_idx);
+            frame.empty_row();
+            if pb.is_indeterminate() {
+                frame.row(format!("  {}", bar_visual));
+                frame.row(format!("  {} • {}", pb.format_counts().cyan(), pb.format_speed().dimmed()));
+            } else {
+                frame.row(format!("  {} {:>5.1}%", bar_visual, pb.percent()));
+                frame.row(format!("  {} • {} • {}", pb.format_counts().cyan(), pb.format_speed().dimmed(), pb.format_eta().yellow()));
+            }
+        }
+
         if !self.steps.is_empty() {
             frame.empty_row();
             for (step, completed) in &self.steps {
@@ -89,6 +120,20 @@ impl WaitingModal {
         frame.title = Some((self.title.clone(), false));
 
         frame.row(self.message.clone());
+
+        if let Some(ref pb) = self.progress {
+            let inner_width = width.saturating_sub(4);
+            let bar_width = inner_width.saturating_sub(10).clamp(20, 48);
+            let bar_visual = pb.render_bar(bar_width, 0);
+            frame.empty_row();
+            if pb.is_indeterminate() {
+                frame.row(format!("  {}", bar_visual));
+                frame.row(format!("  {} • {}", pb.format_counts().cyan(), pb.format_speed().dimmed()));
+            } else {
+                frame.row(format!("  {} {:>5.1}%", bar_visual, pb.percent()));
+                frame.row(format!("  {} • {} • {}", pb.format_counts().cyan(), pb.format_speed().dimmed(), pb.format_eta().yellow()));
+            }
+        }
 
         if !self.steps.is_empty() {
             frame.empty_row();

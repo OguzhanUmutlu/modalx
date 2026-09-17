@@ -90,6 +90,7 @@ pub mod prelude {
         form::{FormField, FormFieldType, FormModal, FormResult},
         info::InfoModal,
         input::{InputModal, InputOutcome, InputValidator},
+        progress::{ProgressBar, ProgressModal, ProgressStyle},
         select::{parse_header_lines, SelectModal, SelectOutcome},
         table::{ColumnAlign, TableColumn, TableModal, TableOutcome},
         waiting::{render_boxed_status, WaitingModal, SPINNER_FRAMES},

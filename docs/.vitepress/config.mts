@@ -22,7 +22,7 @@ export default defineConfig({
       { text: 'Cookbooks', link: '/cookbooks/interactive-wizard' },
       { text: 'API Reference', link: '/api/reference' },
       {
-        text: 'v0.1.1',
+        text: 'v0.1.2',
         items: [
           { text: 'crates.io', link: 'https://crates.io/crates/modalx' },
           { text: 'docs.rs', link: 'https://docs.rs/modalx' },
@@ -52,7 +52,8 @@ export default defineConfig({
           { text: 'ConfirmModal', link: '/modals/confirm-modal' },
           { text: 'InfoModal', link: '/modals/info-modal' },
           { text: 'TableModal', link: '/modals/table-modal' },
-          { text: 'WaitingModal', link: '/modals/waiting-modal' }
+          { text: 'WaitingModal', link: '/modals/waiting-modal' },
+          { text: 'ProgressModal', link: '/modals/progress-modal' }
         ]
       },
       {
