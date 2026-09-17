@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>modalx — Vector Logo Concepts Showcase</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --border: #1f293d;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --cyan: #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 40px 24px;
+      line-height: 1.6;
+    }
+    header {
+      max-width: 1200px;
+      margin: 0 auto 40px;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 16px;
+    }
+    .grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--cyan);
+    }
+    .preview-box {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #060911;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #1e293b;
+    }
+    .preview-box img, .preview-box object {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-family: monospace;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--cyan);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      margin-bottom: 12px;
+      width: fit-content;
+    }
+    .card p {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      flex: 1;
+    }
+    .sizes-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-top: 14px;
+      border-top: 1px solid #1f2937;
+    }
+    .size-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .size-samples {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sample-64 { width: 48px; height: 48px; border-radius: 10px; overflow: hidden; }
+    .sample-32 { width: 28px; height: 28px; border-radius: 6px; overflow: hidden; }
+    .sample-16 { width: 18px; height: 18px; border-radius: 4px; overflow: hidden; }
+    .sample-64 img, .sample-32 img, .sample-16 img { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>modalx — Vector Logo Concepts</h1>
+    <p>Modern, scalable vector logo proposals for the modalx terminal framework.</p>
+  </header>
+
+  <div class="grid">
+    <!-- Concept 1 -->
+    <div class="card">
+      <div class="preview-box">
+        <img src="logo-concept-1.svg" alt="Concept 1: The Encapsulated Monogram">
+      </div>
+      <h2>The Encapsulated Monogram</h2>
+      <div class="badge">CONCEPT 1 &bull; RECOMMENDED</div>
+      <p>A high-tech terminal window featuring Unicode corner brackets (╭─╮ ╰─╯) enclosing a dynamic M &times; X monogram ligature where outer pillars double as terminal walls and diagonal crossbars form the X.</p>
+      <div class="sizes-row">
+        <span class="size-label">Favicon scale</span>
+        <div class="size-samples">
+          <div class="sample-64"><img src="logo-concept-1.svg" alt="64px"></div>
+          <div class="sample-32"><img src="logo-concept-1.svg" alt="32px"></div>
+          <div class="sample-16"><img src="logo-concept-1.svg" alt="16px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concept 2 -->
+    <div class="card">
+      <div class="preview-box">
+        <img src="logo-concept-2.svg" alt="Concept 2: The Elevated Modal Card">
+      </div>
+      <h2>The Elevated Modal Card</h2>
+      <div class="badge">CONCEPT 2 &bull; DEPTH & VIEWPORT</div>
+      <p>Visualizes the core concept of a terminal modal: an elevated, focused dialog floating above a dimmed shell canvas with glowing cyan borders and an interactive prompt crosshair.</p>
+      <div class="sizes-row">
+        <span class="size-label">Favicon scale</span>
+        <div class="size-samples">
+          <div class="sample-64"><img src="logo-concept-2.svg" alt="64px"></div>
+          <div class="sample-32"><img src="logo-concept-2.svg" alt="32px"></div>
+          <div class="sample-16"><img src="logo-concept-2.svg" alt="16px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concept 3 -->
+    <div class="card">
+      <div class="preview-box">
+        <img src="logo-concept-3.svg" alt="Concept 3: The Unicode Corner Matrix">
+      </div>
+      <h2>The Unicode Corner Matrix</h2>
+      <div class="badge">CONCEPT 3 &bull; MINIMALIST</div>
+      <p>Four heavy Unicode box corners (╭─ ─╮ ╰─ ─╯) forming an open boundary matrix. Inside, two faceted diagonal blades create an electric X with Rust orange and cyber cyan hues.</p>
+      <div class="sizes-row">
+        <span class="size-label">Favicon scale</span>
+        <div class="size-samples">
+          <div class="sample-64"><img src="logo-concept-3.svg" alt="64px"></div>
+          <div class="sample-32"><img src="logo-concept-3.svg" alt="32px"></div>
+          <div class="sample-16"><img src="logo-concept-3.svg" alt="16px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concept 4 -->
+    <div class="card">
+      <div class="preview-box">
+        <img src="logo-concept-4.svg" alt="Concept 4: The Bracketed Keycap">
+      </div>
+      <h2>The Bracketed Keycap</h2>
+      <div class="badge">CONCEPT 4 &bull; SHORTCUT FOCUS</div>
+      <p>Direct homage to keyboard shortcuts [1], [Enter], and [Esc]. Heavy square brackets enclose an intricate MX typographic monogram set within a tactile terminal keycap.</p>
+      <div class="sizes-row">
+        <span class="size-label">Favicon scale</span>
+        <div class="size-samples">
+          <div class="sample-64"><img src="logo-concept-4.svg" alt="64px"></div>
+          <div class="sample-32"><img src="logo-concept-4.svg" alt="32px"></div>
+          <div class="sample-16"><img src="logo-concept-4.svg" alt="16px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

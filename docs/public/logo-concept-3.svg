@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D15"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+
+    <!-- Rust Orange & Cyber Amber Gradient -->
+    <linearGradient id="rustOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FB923C"/>
+    </linearGradient>
+
+    <!-- Electric Cyan Gradient -->
+    <linearGradient id="electricCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </linearGradient>
+
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="50%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+
+    <filter id="coreGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background Tile -->
+  <rect width="512" height="512" rx="112" fill="url(#bg3)"/>
+  <rect width="508" height="508" x="2" y="2" rx="110" fill="none" stroke="#1F2937" stroke-width="2"/>
+
+  <!-- Radial Background Flare -->
+  <circle cx="256" cy="256" r="180" fill="#38BDF8" fill-opacity="0.08"/>
+
+  <!-- Four Heavy Unicode Box Corners -->
+  <!-- Top-Left: ╭─ -->
+  <path d="M 120 200 L 120 152 Q 120 120 152 120 L 200 120" fill="none" stroke="url(#borderGrad)" stroke-width="14" stroke-linecap="round"/>
+  <!-- Top-Right: ─╮ -->
+  <path d="M 312 120 L 360 120 Q 392 120 392 152 L 392 200" fill="none" stroke="url(#borderGrad)" stroke-width="14" stroke-linecap="round"/>
+  <!-- Bottom-Left: ╰─ -->
+  <path d="M 120 312 L 120 360 Q 120 392 152 392 L 200 392" fill="none" stroke="url(#borderGrad)" stroke-width="14" stroke-linecap="round"/>
+  <!-- Bottom-Right: ─╯ -->
+  <path d="M 312 392 L 360 392 Q 392 392 392 360 L 392 312" fill="none" stroke="url(#borderGrad)" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- Central Dynamic "X" Mark (Faceted Beams) -->
+  <g filter="url(#coreGlow)" transform="translate(256, 256)">
+    <!-- Primary Cyan Blade (Top-Left to Bottom-Right) -->
+    <path d="M -75 -75 C -82 -82 -82 -92 -75 -99 C -68 -106 -58 -106 -51 -99 L 99 51 C 106 58 106 68 99 75 C 92 82 82 82 75 75 Z" fill="url(#electricCyan)"/>
+
+    <!-- Crossing Rust-Orange Blade (Top-Right to Bottom-Left) with Cutout Gap -->
+    <path d="M 75 -75 C 82 -82 82 -92 75 -99 C 68 -106 58 -106 51 -99 L 24 -72 C 17 -65 17 -55 24 -48 L 48 -24 C 55 -17 65 -17 72 -24 Z" fill="url(#rustOrange)"/>
+    <path d="M -24 48 C -17 41 -17 31 -24 24 L -48 -0 C -55 -7 -65 -7 -72 0 L -99 51 C -106 58 -106 68 -99 75 C -92 82 -82 82 -75 75 Z" fill="url(#rustOrange)"/>
+
+    <!-- Glowing Center Monogram Notch -->
+    <circle cx="0" cy="0" r="10" fill="#FFFFFF"/>
+  </g>
+</svg>
