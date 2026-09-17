@@ -1,0 +1,16 @@
+[package]
+name = "modalx"
+version = "0.1.0"
+edition = "2021"
+authors = ["OguzhanUmutlu"]
+license = "MIT"
+repository = "https://github.com/OguzhanUmutlu/modalx"
+description = "A responsive, declarative, box-encapsulated Terminal User Interface (TUI) and modal dialog engine for Rust."
+readme = "README.md"
+keywords = ["tui", "terminal", "modal", "crossterm", "cli"]
+categories = ["command-line-interface", "user-interfaces"]
+
+[dependencies]
+crossterm = "0.29"
+colored = "3.0"
+thiserror = "2.0"
