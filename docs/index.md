@@ -5,6 +5,9 @@ hero:
   name: "modalx"
   text: "Box-Encapsulated Terminal UI Framework for Rust"
   tagline: "Declarative, responsive, zero-flicker modal dialogs and structured terminal interfaces."
+  image:
+    src: /logo.svg
+    alt: modalx logo
   actions:
     - theme: brand
       text: Get Started

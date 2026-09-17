@@ -7,14 +7,20 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', href: '/favicon.png' }],
+    ['link', { rel: 'apple-touch-icon', href: '/logo.png' }],
     ['meta', { name: 'theme-color', content: '#0f172a' }],
     ['meta', { name: 'author', content: 'Oguzhan Umutlu' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'modalx - Terminal Modal Framework for Rust' }],
     ['meta', { property: 'og:description', content: 'A polished, modal-driven terminal UI framework for Rust featuring dynamic boxed frames, interactive forms, and context-aware shortcuts.' }],
+    ['meta', { property: 'og:image', content: 'https://modalx.oguzhanumutlu.com/logo.png' }],
+    ['meta', { name: 'twitter:image', content: 'https://modalx.oguzhanumutlu.com/logo.png' }],
   ],
   themeConfig: {
     siteTitle: 'modalx',
+    logo: '/logo.svg',
     nav: [
       { text: 'Guide', link: '/guide/introduction' },
       { text: 'Modals', link: '/modals/overview' },

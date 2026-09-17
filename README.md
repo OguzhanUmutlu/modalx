@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" width="128" height="128" alt="modalx logo" />
+</p>
+
 # modalx
 
 [![Crates.io](https://img.shields.io/crates/v/modalx.svg)](https://crates.io/crates/modalx)
