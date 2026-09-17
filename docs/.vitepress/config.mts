@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'modalx',
-  description: 'Responsive, declarative, box-encapsulated terminal user interface and modal dialog engine for Rust.',
+  description: 'A polished, modal-driven terminal UI framework for Rust featuring dynamic boxed frames, interactive forms, and context-aware shortcuts.',
   base: '/',
   cleanUrls: true,
   lastUpdated: true,
@@ -11,7 +11,7 @@ export default defineConfig({
     ['meta', { name: 'author', content: 'Oguzhan Umutlu' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'modalx - Terminal Modal Framework for Rust' }],
-    ['meta', { property: 'og:description', content: 'Responsive, declarative, box-encapsulated terminal user interface and modal dialog engine for Rust.' }],
+    ['meta', { property: 'og:description', content: 'A polished, modal-driven terminal UI framework for Rust featuring dynamic boxed frames, interactive forms, and context-aware shortcuts.' }],
   ],
   themeConfig: {
     siteTitle: 'modalx',
