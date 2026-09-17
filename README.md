@@ -9,19 +9,19 @@ A responsive, declarative, box-encapsulated Terminal User Interface (TUI) and mo
 
 ```
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│                        CLOUD INFRASTRUCTURE DASHBOARD                        │
+│                     WORKSPACE & PIPELINE CONTROLLER                          │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  Host: Ubuntu-Workstation | RAM: 14.2 / 32.0 GB (44.3%) | Status: [HEALTHY]  │
-│  Active Services: 18 | Alerts: 0 | Network: 1.2 Gbps                         │
+│  Project: nexus-core | Branch: feat/async-worker | Target: x86_64-musl       │
+│  Environment: Staging | Health: Nominal (99.9%) | Active Workers: 8          │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  > [1]   Virtual Machines                                                    │
-│    [2]   Kubernetes Clusters                                                 │
-│    [3]   Persistent Volumes                                                  │
-│    [4]   Security Groups & Firewall                                          │
-│    [5]   Audit & Access Logs                                                 │
-│    [6]   Billing & Usage                                                     │
+│  > [1]   Run Build & Verification Pipeline                                   │
+│    [2]   Interactive Test Suite (51 passed)                                  │
+│    [3]   Database Schema Migrations                                          │
+│    [4]   Deploy Staging Canary Artifact                                      │
+│    [5]   Inspect Telemetry & Real-Time Logs                                  │
+│    [6]   Workspace Configuration & Secrets                                   │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  [↑/↓/j/k] Move  |  [Enter/→] Select  |  [Esc/←] Back  |  [q] Exit           │
+│  [↑/↓/j/k] Navigate  |  [Enter] Execute  |  [Esc] Back  |  [q] Quit          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
@@ -29,9 +29,9 @@ A responsive, declarative, box-encapsulated Terminal User Interface (TUI) and mo
 
 ## Core Capabilities
 
-- **Strict Unicode Box Encapsulation**: All visual content is contained within Unicode borders (`╭─╮`, `│ │`, `├─┤`, `╰─╯`) with automatic ASCII fallback. Boundaries never clip, overflow, or break terminal line layouts.
+- **Strict Unicode Box Encapsulation**: All visual content is strictly contained within Unicode borders (`╭─╮`, `│ │`, `├─┤`, `╰─╯`) with automatic ASCII fallback. Boundaries never clip, overflow, or break terminal line layouts.
 - **Responsive Terminal Protection**: Detects constrained viewports (< 60 columns x 14 rows), pauses execution with a centered warning card, and automatically resumes on resize.
-- **Dynamic Greedy Reflow**: Delimited metadata tokens (e.g. `Host: ... | RAM: ... | Status: ...`) dynamically wrap across multiple framed lines rather than truncating with ellipses.
+- **Dynamic Greedy Reflow**: Delimited metadata tokens (e.g. `Branch: main | Target: Release | Status: Ready`) dynamically wrap across multiple framed lines rather than truncating with ellipses.
 - **Full Modal Library**:
   - `SelectModal`: Searchable, paginated keyboard-driven menus with hotkeys and vim navigation.
   - `FormModal`: Multi-field forms with real-time validators, keystroke force-validators, masked password fields, integer/numeric constraints, and unsaved changes confirmation.
@@ -70,7 +70,7 @@ curl -fsSL https://modalx.oguzhanumutlu.com/install.sh | bash
 
 ## Quickstart
 
-### 1. Menu Selection
+### 1. Interactive Command Center (`SelectModal`)
 
 ```rust
 use modalx::prelude::*;
@@ -79,12 +79,13 @@ fn main() -> modalx::Result<()> {
     let mut selected = 0;
 
     let modal = SelectModal::new()
-        .with_title("SYSTEM MANAGEMENT", false)
-        .with_raw_fields("Cluster: us-east-1 | Nodes: 12 | Health: Nominal", " | ")
-        .item("1", "Node Pools")
-        .item("2", "Persistent Storage")
-        .item("3", "Security Policies")
-        .item("q", "Exit");
+        .with_title("WORKSPACE CONTROLLER", false)
+        .with_raw_fields("Project: nexus | Target: Release | Status: Ready", " | ")
+        .item("1", "Run Build Pipeline")
+        .item("2", "Interactive Test Runner")
+        .item("3", "Database Schema Migrations")
+        .item("4", "Deploy Canary Release")
+        .item("q", "Quit");
 
     match modal.run(&mut selected)? {
         SelectOutcome::Selected(idx) => println!("Selected item: {}", idx),
@@ -96,51 +97,113 @@ fn main() -> modalx::Result<()> {
 }
 ```
 
-### 2. Multi-Field Form with Validation
+### 2. Multi-Field Form with Validation (`FormModal`)
 
 ```rust
 use modalx::prelude::*;
 
 fn main() -> modalx::Result<()> {
-    let modal = FormModal::new("DATABASE CONNECTION")
-        .field(FormField::string("host", "Hostname").with_default("127.0.0.1"))
+    let modal = FormModal::new("SERVICE CONFIGURATION")
+        .field(FormField::string("name", "Service Name").with_default("api-gateway"))
         .field(
-            FormField::integer("port", "Port")
-                .with_default("5432")
+            FormField::integer("port", "Listen Port")
+                .with_default("8080")
                 .with_validator(|val| match val.parse::<u16>() {
-                    Ok(p) if p > 0 => Ok(()),
-                    _ => Err("Port must be between 1 and 65535".to_string()),
+                    Ok(p) if p > 1024 => Ok(()),
+                    _ => Err("Port must be an unprivileged port (> 1024)".to_string()),
                 }),
         )
-        .field(FormField::string("user", "Username").with_default("postgres"))
-        .field(FormField::password("password", "Password"));
+        .field(FormField::string("env", "Environment").with_default("production"))
+        .field(FormField::password("secret_key", "API Secret Key"));
 
     if let FormResult::Submitted(values) = modal.run()? {
-        println!("Connecting to {}:{} as {}", values["host"], values["port"], values["user"]);
+        println!(
+            "Configuring {} on port {} ({})",
+            values["name"], values["port"], values["env"]
+        );
     }
 
     Ok(())
 }
 ```
 
-### 3. Destructive Confirmation Dialog
+### 3. Production Deployment Confirmation (`ConfirmModal`)
 
 ```rust
 use modalx::prelude::*;
 
 fn main() -> modalx::Result<()> {
-    let outcome = ConfirmModal::new("PURGE VOLUME", "Permanently remove persistent volume 'vol-data-01'?")
-        .danger(true)
-        .with_detail("This operation cannot be undone. All database records will be erased.")
-        .with_yes_label("Purge Volume")
-        .with_no_label("Cancel")
-        .default_yes(false)
-        .run()?;
+    let outcome = ConfirmModal::new(
+        "PROMOTE CANARY",
+        "Deploy canary build to 100% production traffic?",
+    )
+    .danger(true)
+    .with_detail("This routes live end-user traffic to release v2.4.0 across all regions.")
+    .with_yes_label("Promote to Production")
+    .with_no_label("Abort Deployment")
+    .default_yes(false)
+    .run()?;
 
     if outcome == ConfirmOutcome::Confirmed {
-        println!("Volume purged.");
+        println!("Deployment initiated.");
+    } else {
+        println!("Deployment cancelled.");
     }
 
+    Ok(())
+}
+```
+
+### 4. Tabular Data Browser (`TableModal`)
+
+```rust
+use modalx::prelude::*;
+
+fn main() -> modalx::Result<()> {
+    let mut selected_row = 0;
+
+    let columns = vec![
+        TableColumn::new("PID", 8).right_aligned(),
+        TableColumn::new("Process Name", 24),
+        TableColumn::new("Memory (MB)", 14).right_aligned(),
+        TableColumn::new("CPU (%)", 10).right_aligned(),
+        TableColumn::new("Status", 12),
+    ];
+
+    let rows = vec![
+        vec!["1042".into(), "systemd".into(), "48.2".into(), "0.1".into(), "Running".into()],
+        vec!["2180".into(), "dockerd".into(), "312.5".into(), "1.4".into(), "Running".into()],
+        vec!["3401".into(), "postgres".into(), "524.8".into(), "2.1".into(), "Running".into()],
+        vec!["4892".into(), "redis-server".into(), "84.1".into(), "0.3".into(), "Running".into()],
+        vec!["6720".into(), "worker-pool".into(), "41.6".into(), "0.0".into(), "Running".into()],
+    ];
+
+    let modal = TableModal::new("SYSTEM PROCESS INSPECTOR")
+        .with_columns(columns)
+        .with_rows(rows)
+        .with_selectable(true);
+
+    if let TableOutcome::Selected(idx) = modal.run(&mut selected_row)? {
+        println!("Selected process index: {}", idx);
+    }
+
+    Ok(())
+}
+```
+
+### 5. Multi-Step Task Monitor (`WaitingModal`)
+
+```rust
+use modalx::prelude::*;
+
+fn main() -> modalx::Result<()> {
+    let modal = WaitingModal::new("PIPELINE DEPLOYMENT", "Compiling release artifacts...")
+        .with_step("Verify dependency checksums", true)
+        .with_step("Compile optimized binaries", true)
+        .with_step("Execute integration test suite", false)
+        .with_step("Publish container images", false);
+
+    modal.render_static(&mut std::io::stdout())?;
     Ok(())
 }
 ```
@@ -172,7 +235,9 @@ cargo run --example progress_spinner
 
 ## Documentation
 
-Comprehensive documentation, architecture guides, and cookbooks are available on the official documentation site.
+Comprehensive documentation, architecture guides, and cookbooks are available on the official documentation site:
+- Documentation: [modalx.oguzhanumutlu.com](https://modalx.oguzhanumutlu.com)
+- API Reference: [docs.rs/modalx](https://docs.rs/modalx)
 
 ---
 

@@ -22,7 +22,7 @@ export default defineConfig({
       { text: 'Cookbooks', link: '/cookbooks/interactive-wizard' },
       { text: 'API Reference', link: '/api/reference' },
       {
-        text: 'v0.1.0',
+        text: 'v0.1.1',
         items: [
           { text: 'crates.io', link: 'https://crates.io/crates/modalx' },
           { text: 'docs.rs', link: 'https://docs.rs/modalx' },

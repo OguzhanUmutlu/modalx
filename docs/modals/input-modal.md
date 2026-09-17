@@ -8,13 +8,13 @@
 
 ```
 ╭────────────────────────────────────────────────────────────╮
-│                    NEW SERVER SETUP                        │
+│                    NEW SERVICE SETUP                       │
 ├────────────────────────────────────────────────────────────┤
-│  Enter a name for the new Minecraft instance:              │
+│  Enter a name for the new backend service:                 │
 │                                                            │
-│  [ survival-world-2026_                                  ] │
+│  [ auth-service-2026_                                    ] │
 │                                                            │
-│  ✗ Server name cannot contain uppercase characters         │
+│  ✗ Service name cannot contain uppercase characters        │
 ├────────────────────────────────────────────────────────────┤
 │  [Enter] Submit  |  [Esc] Cancel  |  [Ctrl+W] Delete Word  │
 ╰────────────────────────────────────────────────────────────╯

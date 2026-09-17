@@ -8,7 +8,7 @@
 
 | Modal | Primary Use Case | Output Type | Key Navigation Features |
 | :--- | :--- | :--- | :--- |
-| **`SelectModal`** | Menus, options lists, server selectors | `SelectOutcome` | Arrows, vim keys (`j`/`k`), numeric hotkeys (`1-9`), search filtering |
+| **`SelectModal`** | Menus, options lists, resource selectors | `SelectOutcome` | Arrows, vim keys (`j`/`k`), numeric hotkeys (`1-9`), search filtering |
 | **`FormModal`** | Multi-field records, credentials, network settings | `FormResult` | `Tab`/`Shift+Tab` cycling, real-time validators, force-validators, masked passwords |
 | **`InputModal`** | Single-value prompt (names, paths, URLs) | `InputOutcome` | Full readline editing, word deletion (`Ctrl+W`), real-time error banner |
 | **`ConfirmModal`** | Binary choices, destructive action gates | `ConfirmOutcome` | Centered text flow, `y`/`n` shortcuts, danger mode, default focus toggle |

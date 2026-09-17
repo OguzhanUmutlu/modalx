@@ -8,15 +8,15 @@
 
 ```
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│                               PING SUCCESSFUL                                │
-│               Dashboard › Remote Hosts › saga › Offline Actions              │
+│                        HEALTH CHECK REPORT                                   │
+│              Cluster › us-east-1 › Ingress Controller › Status               │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  Host: root@185.157.46.103:22                                                │
-│  Status: Reachable                                                           │
-│  Latency: 28.4ms                                                             │
+│  Endpoint: https://api.internal.net/v1/health                                │
+│  Status: 200 OK (Nominal)                                                    │
+│  Latency: 14.2ms                                                             │
 │                                                                              │
-│  SSH Banner: SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.5                        │
-│  Host Key: SHA256:4H9+3dJ3mFvXy8eK7R1ZqT4pW0uA9cE2sI7bN5oL8g                │
+│  TLS Certificate: Valid (expires in 84 days)                                 │
+│  TLS Issuer: Let's Encrypt Authority X3                                      │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │  [Enter/Esc] Dismiss  |  [q] Exit                                            │
 ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -31,15 +31,15 @@ use modalx::prelude::*;
 
 fn main() -> modalx::Result<()> {
     let output_lines = vec![
-        "Host: root@185.157.46.103:22".to_string(),
-        "Status: Reachable".to_string(),
-        "Latency: 28.4ms".to_string(),
+        "Endpoint: https://api.internal.net/v1/health".to_string(),
+        "Status: 200 OK (Nominal)".to_string(),
+        "Latency: 14.2ms".to_string(),
         "".to_string(),
-        "SSH Banner: SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.5".to_string(),
-        "Host Key: SHA256:4H9+3dJ3mFvXy8eK7R1ZqT4pW0uA9cE2sI7bN5oL8g".to_string(),
+        "TLS Certificate: Valid (expires in 84 days)".to_string(),
+        "TLS Issuer: Let's Encrypt Authority X3".to_string(),
     ];
 
-    InfoModal::new("PING SUCCESSFUL", output_lines)
+    InfoModal::new("HEALTH CHECK REPORT", output_lines)
         .run()?;
 
     Ok(())

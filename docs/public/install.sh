@@ -32,7 +32,7 @@ echo -e "${GREEN}✓${NC} Found Rust ${BOLD}v${RUST_VER}${NC}"
 
 if [ -f "Cargo.toml" ]; then
     echo -e "${BLUE}==>${NC} Existing Cargo workspace detected."
-    echo -e "Adding ${BOLD}modalx = \"0.1.0\"${NC} to your project..."
+    echo -e "Adding ${BOLD}modalx${NC} to your project..."
     cargo add modalx
     echo -e "${GREEN}✓ modalx dependency added successfully!${NC}"
     echo ""

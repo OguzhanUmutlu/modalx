@@ -8,21 +8,21 @@
 
 ```
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│                       REMOTE HOST AUTHENTICATION                             │
-│                  Dashboard › Remote Hosts › saga › Edit                      │
+│                    MICROSERVICE GATEWAY CREDENTIALS                          │
+│             Settings › Cluster Connection › prod-gateway › Edit              │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  Configure SSH connection parameters and credentials:                        │
+│  Configure API gateway connection parameters and credentials:                │
 │                                                                              │
 │  Label:                                                                      │
-│  [ saga-production                                            ]              │
+│  [ prod-gateway-primary                                       ]              │
 │                                                                              │
 │  Host:                                                                       │
-│  [ 185.157.46.103                                             ]              │
+│  [ 10.0.12.45                                                 ]              │
 │                                                                              │
 │  Port:                                                                       │
-│  [ 22                                                         ]              │
+│  [ 8080                                                       ]              │
 │                                                                              │
-│  Password / Passphrase:                                                      │
+│  Password / Secret Token:                                                    │
 │  [ ******************                                         ]              │
 │                                                                              │
 │                       [ Save ]         [ Cancel ]                            │

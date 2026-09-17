@@ -11,9 +11,9 @@
 │                       CONFIRMATION                         │
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
-│     Terminate the Craft background daemon process?         │
+│     Terminate the background daemon worker process?        │
 │                                                            │
-│       Active server instances will continue running        │
+│       Active task jobs will continue running               │
 │       in the background without health monitoring.         │
 │                                                            │
 │               [ Yes, Terminate ]     [ Cancel ]            │
@@ -32,19 +32,19 @@ use modalx::prelude::*;
 
 fn main() -> modalx::Result<()> {
     let outcome = ConfirmModal::new(
-        "STOP SERVER",
-        "Are you sure you want to stop 'survival_prod'?"
+        "TERMINATE WORKER",
+        "Are you sure you want to stop background worker 'worker-01'?"
     )
-    .with_detail("Connected players will be safely disconnected.")
-    .with_yes_label("Stop Server")
+    .with_detail("In-flight tasks will complete before shutdown.")
+    .with_yes_label("Stop Worker")
     .with_no_label("Keep Running")
     .default_yes(true)
     .run()?;
 
     if outcome == ConfirmOutcome::Confirmed {
-        println!("Stopping server...");
+        println!("Stopping worker...");
     } else {
-        println!("Server remains running.");
+        println!("Worker remains running.");
     }
 
     Ok(())
@@ -55,19 +55,19 @@ fn main() -> modalx::Result<()> {
 
 ## Danger Mode for Destructive Actions
 
-When an action is irreversible (such as deleting databases, purging backups, or formatting storage pools), enabling `.danger(true)` modifies the visual presentation:
+When an action is irreversible (such as deleting databases, purging volumes, or dropping tables), enabling `.danger(true)` modifies the visual presentation:
 - The affirmative button is highlighted in vivid red.
 - Focus defaults safely to the negative button (`[ Cancel ]`).
 - Pressing `y` directly requires conscious confirmation.
 
 ```rust
 let outcome = ConfirmModal::new(
-    "DELETE ALL BACKUPS",
-    "Permanently delete all 24 local backups for 'lobby_server'?"
+    "PURGE VOLUME",
+    "Permanently remove persistent volume 'vol-data-01'?"
 )
 .danger(true)
-.with_detail("This action cannot be undone. All compressed archives will be purged.")
-.with_yes_label("Delete All Backups")
+.with_detail("This action cannot be undone. All database records will be erased.")
+.with_yes_label("Purge Volume")
 .with_no_label("Cancel")
 .default_yes(false) // Safe default
 .run()?;

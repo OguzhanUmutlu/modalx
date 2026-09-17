@@ -49,7 +49,7 @@ fn main() -> modalx::Result<()> {
         ],
         vec![
             "6720".into(),
-            "craft-daemon".into(),
+            "worker-pool".into(),
             "41.6".into(),
             "0.0".into(),
             "Running".into(),

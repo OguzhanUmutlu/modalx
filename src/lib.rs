@@ -5,7 +5,7 @@
 //! ## Highlights
 //! - **Airtight Dynamic Box Framing**: All visual components are strictly encapsulated within dynamic Unicode box borders (`╭─╮`, `│ │`, `├─┤`, `╰─╯`).
 //! - **Responsive Sizing & Terminal Protection**: Automatically detects narrow windows (< 60 cols × 14 rows), rendering a clean, centered "TERMINAL TOO SMALL" warning card that resumes execution upon window resize.
-//! - **Flow Layout & Field Reflow**: Delimited metadata (e.g. `Host: Ubuntu | RAM: 8GB | Status: Online`) reflows greedily across multiple lines when terminal width is narrow, avoiding unsightly ellipsis truncation.
+//! - **Flow Layout & Field Reflow**: Delimited metadata (e.g. `Branch: main | Target: Release | Status: Ready`) reflows greedily across multiple lines when terminal width is narrow, avoiding unsightly ellipsis truncation.
 //! - **Composable Sections**: Build interfaces declaratively using `TitleSection`, `FieldSection`, `TextSection`, `MenuSection`, and `FooterSection`.
 //! - **Batteries-Included Modals**:
 //!   - [`SelectModal`]: Searchable, paginated keyboard-driven menus with hotkeys and vim navigation.
@@ -24,11 +24,11 @@
 //! fn main() -> modalx::Result<()> {
 //!     let mut selected = 0;
 //!     let modal = SelectModal::new()
-//!         .with_title("MAIN MENU", false)
-//!         .with_raw_fields("Host: Ubuntu | RAM: 16 GB | Status: OK", " | ")
-//!         .item("1", "Local Servers")
-//!         .item("2", "Remote Hosts")
-//!         .item("3", "Settings");
+//!         .with_title("WORKSPACE CONTROLLER", false)
+//!         .with_raw_fields("Project: nexus | Target: Release | Status: Ready", " | ")
+//!         .item("1", "Run Build Pipeline")
+//!         .item("2", "Interactive Test Runner")
+//!         .item("3", "Deploy & Release");
 //!
 //!     match modal.run(&mut selected)? {
 //!         SelectOutcome::Selected(idx) => println!("Selected item {}", idx),

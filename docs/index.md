@@ -33,18 +33,18 @@ features:
 
 ```
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│                        CLOUD INFRASTRUCTURE DASHBOARD                        │
+│                     WORKSPACE & PIPELINE CONTROLLER                          │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  Host: Ubuntu-Workstation | RAM: 14.2 / 32.0 GB (44.3%) | Status: [HEALTHY]  │
-│  Active Services: 18 | Alerts: 0 | Network: 1.2 Gbps                         │
+│  Project: nexus-core | Branch: feat/async-worker | Target: x86_64-musl       │
+│  Environment: Staging | Health: Nominal (99.9%) | Active Workers: 8          │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  > [1]   Virtual Machines                                                    │
-│    [2]   Kubernetes Clusters                                                 │
-│    [3]   Persistent Volumes                                                  │
-│    [4]   Security Groups & Firewall                                          │
-│    [5]   Audit & Access Logs                                                 │
-│    [6]   Billing & Usage                                                     │
+│  > [1]   Run Build & Verification Pipeline                                   │
+│    [2]   Interactive Test Suite (51 passed)                                  │
+│    [3]   Database Schema Migrations                                          │
+│    [4]   Deploy Staging Canary Artifact                                      │
+│    [5]   Inspect Telemetry & Real-Time Logs                                  │
+│    [6]   Workspace Configuration & Secrets                                   │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  [↑/↓/j/k] Move  |  [Enter/→] Select  |  [Esc/←] Back  |  [q] Exit           │
+│  [↑/↓/j/k] Navigate  |  [Enter] Execute  |  [Esc] Back  |  [q] Quit          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
