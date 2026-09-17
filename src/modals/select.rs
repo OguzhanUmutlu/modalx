@@ -17,6 +17,15 @@ use crate::terminal::{
 use crate::text_flow::{wrap_delimited_string, wrap_words};
 use crate::theme::strip_ansi;
 
+/// Decision returned by an action/event handler callback to control modalx event flow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EventDecision {
+    /// Proceed with normal event processing: modalx updates selected_idx and exits with SelectOutcome::Selected(idx).
+    Proceed,
+    /// Cancel the event action: modalx keeps its selected_idx unchanged, stays in the event loop, and re-renders in place.
+    Cancel,
+}
+
 /// Outcome returned by running a `SelectModal`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SelectOutcome {
@@ -244,16 +253,32 @@ impl SelectModal {
 
     /// Constructs the responsive `BoxFrame` and calculates the dynamic item `viewport_size`
     /// based on terminal dimensions and strict vertical height prioritization.
-    ///
-    /// Fixed structural elements (borders, title, breadcrumbs, dividers, metadata headers,
-    /// and footer shortcuts) have highest priority. The items list has lowest priority and
-    /// shrinks dynamically to fit within `term_h`.
     pub fn build_frame(
         &self,
         term_w: u16,
         term_h: u16,
         selected_idx: usize,
         scroll_offset: &mut usize,
+    ) -> (BoxFrame, usize) {
+        self.build_frame_state(
+            term_w,
+            term_h,
+            selected_idx,
+            scroll_offset,
+            &self.entries,
+            &self.header_rows,
+        )
+    }
+
+    /// Constructs the responsive `BoxFrame` given dynamic entries and header rows.
+    pub fn build_frame_state(
+        &self,
+        term_w: u16,
+        term_h: u16,
+        selected_idx: usize,
+        scroll_offset: &mut usize,
+        entries: &[SelectItem],
+        header_rows: &[String],
     ) -> (BoxFrame, usize) {
         let available = (term_w as usize).saturating_sub(2);
         let width = if self.max_width == 0 || self.max_width <= 80 {
@@ -283,7 +308,7 @@ impl SelectModal {
             }
         }
 
-        for row in &self.header_rows {
+        for row in header_rows {
             if row.contains(" | ") {
                 rendered_metadata_rows.extend(wrap_delimited_string(
                     row,
@@ -358,11 +383,11 @@ impl SelectModal {
         // 5. Dynamic items budget (Lowest Priority)
         let available_for_items = (term_h as usize).saturating_sub(fixed_overhead);
 
-        let viewport_size = if self.entries.is_empty() {
+        let viewport_size = if entries.is_empty() {
             0
-        } else if self.entries.len() <= available_for_items {
+        } else if entries.len() <= available_for_items {
             // All entries fit without scrolling
-            self.entries.len()
+            entries.len()
         } else {
             // Paginated: reserve 2 rows for [▲ ...] and [▼ ...] indicators
             available_for_items.saturating_sub(2).max(1)
@@ -374,8 +399,8 @@ impl SelectModal {
         } else if viewport_size > 0 && selected_idx >= *scroll_offset + viewport_size {
             *scroll_offset = selected_idx - viewport_size + 1;
         }
-        if viewport_size > 0 && *scroll_offset + viewport_size > self.entries.len() {
-            *scroll_offset = self.entries.len().saturating_sub(viewport_size);
+        if viewport_size > 0 && *scroll_offset + viewport_size > entries.len() {
+            *scroll_offset = entries.len().saturating_sub(viewport_size);
         }
         if selected_idx < *scroll_offset {
             *scroll_offset = selected_idx;
@@ -406,25 +431,33 @@ impl SelectModal {
             );
         }
 
-        let end_idx = self.entries.len().min(*scroll_offset + viewport_size);
-        for (local_i, entry) in self.entries[*scroll_offset..end_idx].iter().enumerate() {
+        let end_idx = entries.len().min(*scroll_offset + viewport_size);
+        for (local_i, entry) in entries[*scroll_offset..end_idx].iter().enumerate() {
             let abs_i = *scroll_offset + local_i;
-            let badge = format!("[{}]", entry.hotkey);
-            let row_str = if abs_i == selected_idx {
-                format!(
-                    "> {:<5} {}",
-                    badge.cyan().bold(),
-                    entry.label.white().bold()
-                )
+            let row_str = if entry.hotkey.is_empty() {
+                if abs_i == selected_idx {
+                    format!("> {}", entry.label.white().bold())
+                } else {
+                    format!("  {}", entry.label)
+                }
             } else {
-                format!("  {:<5} {}", badge.cyan(), entry.label)
+                let badge = format!("[{}]", entry.hotkey);
+                if abs_i == selected_idx {
+                    format!(
+                        "> {:<5} {}",
+                        badge.cyan().bold(),
+                        entry.label.white().bold()
+                    )
+                } else {
+                    format!("  {:<5} {}", badge.cyan(), entry.label)
+                }
             };
             frame.row(row_str);
         }
 
-        if end_idx < self.entries.len() {
+        if end_idx < entries.len() {
             frame.row(
-                format!("[▼ {} more items below]", self.entries.len() - end_idx)
+                format!("[▼ {} more items below]", entries.len() - end_idx)
                     .dimmed()
                     .to_string(),
             );
@@ -437,11 +470,26 @@ impl SelectModal {
 
     /// Executes the interactive menu event loop, updating `selected_idx`.
     pub fn run(&self, selected_idx: &mut usize) -> Result<SelectOutcome> {
+        self.run_with_handler(selected_idx, |_, _, _, _| EventDecision::Proceed)
+    }
+
+    /// Executes the interactive menu event loop with an action handler callback.
+    pub fn run_with_handler<F>(
+        &self,
+        selected_idx: &mut usize,
+        mut on_action: F,
+    ) -> Result<SelectOutcome>
+    where
+        F: FnMut(char, usize, &mut [SelectItem], &mut Vec<String>) -> EventDecision,
+    {
         let mut stdout = io::stdout();
         enable_raw_mode()?;
         let _ = execute!(stdout, Hide);
 
-        if self.entries.is_empty() || *selected_idx >= self.entries.len() {
+        let mut entries = self.entries.clone();
+        let mut header_rows = self.header_rows.clone();
+
+        if entries.is_empty() || *selected_idx >= entries.len() {
             *selected_idx = 0;
         }
 
@@ -455,7 +503,7 @@ impl SelectModal {
 
             let (term_w, term_h) = get_terminal_size();
             let (frame, viewport_size) =
-                self.build_frame(term_w, term_h, *selected_idx, &mut scroll_offset);
+                self.build_frame_state(term_w, term_h, *selected_idx, &mut scroll_offset, &entries, &header_rows);
             frame.render(&mut stdout)?;
 
             match event::read()? {
@@ -467,17 +515,17 @@ impl SelectModal {
                             clean_exit();
                         }
                         KeyAction::Up => {
-                            if !self.entries.is_empty() {
+                            if !entries.is_empty() {
                                 if *selected_idx > 0 {
                                     *selected_idx -= 1;
                                 } else if self.wrap_around {
-                                    *selected_idx = self.entries.len().saturating_sub(1);
+                                    *selected_idx = entries.len().saturating_sub(1);
                                 }
                             }
                         }
                         KeyAction::Down => {
-                            if !self.entries.is_empty() {
-                                if *selected_idx + 1 < self.entries.len() {
+                            if !entries.is_empty() {
+                                if *selected_idx + 1 < entries.len() {
                                     *selected_idx += 1;
                                 } else if self.wrap_around {
                                     *selected_idx = 0;
@@ -489,21 +537,33 @@ impl SelectModal {
                         }
                         KeyAction::PageDown => {
                             *selected_idx = (*selected_idx + viewport_size.max(1))
-                                .min(self.entries.len().saturating_sub(1));
+                                .min(entries.len().saturating_sub(1));
                         }
                         KeyAction::Home => {
                             *selected_idx = 0;
                         }
                         KeyAction::End => {
-                            *selected_idx = self.entries.len().saturating_sub(1);
+                            *selected_idx = entries.len().saturating_sub(1);
                         }
                         KeyAction::Submit | KeyAction::Right => {
-                            if !self.entries.is_empty() {
-                                return Ok(SelectOutcome::Selected(*selected_idx));
+                            if !entries.is_empty() {
+                                let hotkey_char = entries[*selected_idx]
+                                    .hotkey
+                                    .chars()
+                                    .next()
+                                    .unwrap_or('\n');
+                                match on_action(hotkey_char, *selected_idx, &mut entries, &mut header_rows) {
+                                    EventDecision::Proceed => {
+                                        return Ok(SelectOutcome::Selected(*selected_idx));
+                                    }
+                                    EventDecision::Cancel => {
+                                        continue;
+                                    }
+                                }
                             }
                         }
                         KeyAction::Toggle if self.allow_toggle => {
-                            if !self.entries.is_empty() {
+                            if !entries.is_empty() {
                                 return Ok(SelectOutcome::Toggled(*selected_idx));
                             }
                         }
@@ -512,24 +572,46 @@ impl SelectModal {
                         }
                         KeyAction::Hotkey(c) => {
                             let c_str = c.to_ascii_lowercase().to_string();
-                            for (idx, entry) in self.entries.iter().enumerate() {
-                                if entry.hotkey.eq_ignore_ascii_case(&c_str)
-                                    || entry.aliases.iter().any(|a| a.eq_ignore_ascii_case(&c_str))
+                            let mut matched_idx = None;
+                            for (idx, entry) in entries.iter().enumerate() {
+                                if !entry.hotkey.is_empty()
+                                    && (entry.hotkey.eq_ignore_ascii_case(&c_str)
+                                        || entry.aliases.iter().any(|a| a.eq_ignore_ascii_case(&c_str)))
                                 {
-                                    *selected_idx = idx;
-                                    return Ok(SelectOutcome::Selected(idx));
+                                    matched_idx = Some(idx);
+                                    break;
                                 }
                             }
+
+                            if let Some(idx) = matched_idx {
+                                match on_action(c, idx, &mut entries, &mut header_rows) {
+                                    EventDecision::Proceed => {
+                                        *selected_idx = idx;
+                                        return Ok(SelectOutcome::Selected(idx));
+                                    }
+                                    EventDecision::Cancel => {
+                                        continue;
+                                    }
+                                }
+                            }
+
                             if self
                                 .item_actions
                                 .iter()
                                 .any(|&a| a.eq_ignore_ascii_case(&c))
-                                && !self.entries.is_empty()
+                                && !entries.is_empty()
                             {
-                                return Ok(SelectOutcome::ItemAction(
-                                    c.to_ascii_lowercase(),
-                                    *selected_idx,
-                                ));
+                                match on_action(c, *selected_idx, &mut entries, &mut header_rows) {
+                                    EventDecision::Proceed => {
+                                        return Ok(SelectOutcome::ItemAction(
+                                            c.to_ascii_lowercase(),
+                                            *selected_idx,
+                                        ));
+                                    }
+                                    EventDecision::Cancel => {
+                                        continue;
+                                    }
+                                }
                             }
                         }
                         _ => {}
@@ -815,4 +897,24 @@ mod tests {
         assert!(!output.contains("more items above"));
         assert!(!output.contains("more items below"));
     }
+
+    #[test]
+    fn test_select_modal_unkeyed_button_formatting() {
+        let modal = SelectModal::new()
+            .with_title("BUTTON TEST", false)
+            .with_entry(SelectItem::button("1.21.4 (Latest Release)"))
+            .with_entry(SelectItem::new("c", "Custom Version"));
+
+        let mut scroll_offset = 0;
+        let (frame, _) = modal.build_frame(80, 24, 0, &mut scroll_offset);
+        let output = frame.render_to_string();
+        let plain = strip_ansi(&output);
+
+        // The button row has no hotkey badge, so it shouldn't contain "[]" or "[1]"
+        assert!(plain.contains("> 1.21.4 (Latest Release)"));
+        assert!(!plain.contains("[]"));
+        // The keyed entry should have its badge "[c]"
+        assert!(plain.contains("[c]"));
+    }
 }
+

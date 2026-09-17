@@ -20,6 +20,26 @@ impl SelectItem {
         }
     }
 
+    /// Creates a selectable menu button without a hotkey/shortcut.
+    pub fn button(label: impl Into<String>) -> Self {
+        Self {
+            hotkey: String::new(),
+            label: label.into(),
+            description: None,
+            aliases: Vec::new(),
+        }
+    }
+
+    /// Creates a selectable menu item with an optional hotkey.
+    pub fn with_optional_hotkey(hotkey: Option<impl Into<String>>, label: impl Into<String>) -> Self {
+        Self {
+            hotkey: hotkey.map(Into::into).unwrap_or_default(),
+            label: label.into(),
+            description: None,
+            aliases: Vec::new(),
+        }
+    }
+
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
