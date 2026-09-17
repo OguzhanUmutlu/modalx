@@ -1,0 +1,14 @@
+{
+  "name": "modalx-docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Official documentation for modalx - The responsive terminal modal framework for Rust",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.3"
+  }
+}
