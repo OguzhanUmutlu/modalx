@@ -239,7 +239,7 @@ impl SelectModal {
         self
     }
 
-    /// Sets maximum desired box content width (defaults to 80).
+    /// Sets maximum desired box content width (defaults to DEFAULT_MODAL_WIDTH = 84).
     pub fn with_max_width(mut self, width: u16) -> Self {
         self.max_width = width;
         self
@@ -287,13 +287,14 @@ impl SelectModal {
         header_rows: &[String],
     ) -> (BoxFrame, usize) {
         let available = (term_w as usize).saturating_sub(2);
-        let width = if self.max_width == 0 || self.max_width <= 80 {
-            available.max(crate::terminal::MIN_TERM_WIDTH as usize)
+        let desired = if self.max_width == 0 {
+            crate::terminal::DEFAULT_MODAL_WIDTH as usize
         } else {
-            available
-                .min(self.max_width as usize)
-                .max(crate::terminal::MIN_TERM_WIDTH as usize)
+            self.max_width as usize
         };
+        let width = available
+            .min(desired)
+            .max((crate::terminal::MIN_TERM_WIDTH as usize).min(available));
         let available_content_width = width.saturating_sub(6);
 
         // 1. Build metadata rows from both sections and legacy header_rows
@@ -1003,5 +1004,18 @@ mod tests {
             modal.tick_interval,
             Some(std::time::Duration::from_millis(150))
         );
+    }
+
+    #[test]
+    fn test_select_modal_default_width_bounded_and_centered() {
+        let modal = SelectModal::new()
+            .with_title("BOOTSTRAPPING REMOTE HOST", false)
+            .with_entry(SelectItem::new("1", "Option 1"));
+
+        let mut scroll_offset = 0;
+        let (frame, _) = modal.build_frame(160, 24, 0, &mut scroll_offset);
+        assert_eq!(frame.width, crate::terminal::DEFAULT_MODAL_WIDTH as usize);
+        assert!(frame.horizontal_center);
+        assert!(frame.vertical_center);
     }
 }

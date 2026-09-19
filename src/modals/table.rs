@@ -158,13 +158,14 @@ impl TableModal {
         scroll_offset: &mut usize,
     ) -> (BoxFrame, usize) {
         let available = (term_w as usize).saturating_sub(2);
-        let width = if self.max_width == 0 || self.max_width <= 80 {
-            available.max(crate::terminal::MIN_TERM_WIDTH as usize)
+        let desired = if self.max_width == 0 {
+            crate::terminal::DEFAULT_MODAL_WIDTH as usize
         } else {
-            available
-                .min(self.max_width as usize)
-                .max(crate::terminal::MIN_TERM_WIDTH as usize)
+            self.max_width as usize
         };
+        let width = available
+            .min(desired)
+            .max((crate::terminal::MIN_TERM_WIDTH as usize).min(available));
 
         let shortcuts = self.shortcuts.clone().unwrap_or_else(|| {
             if let Some(ref custom_footer) = self.footer_help {
@@ -462,5 +463,19 @@ mod tests {
             assert!(lines[1].contains("SERVER LIST"));
             assert!(viewport_size >= 1);
         }
+    }
+
+    #[test]
+    fn test_table_modal_default_width_bounded_and_centered() {
+        let modal = TableModal::new("SERVER LIST").with_columns(vec![
+            TableColumn::new("Name", 16),
+            TableColumn::new("Status", 10),
+        ]);
+
+        let mut scroll_offset = 0;
+        let (frame, _) = modal.build_frame(160, 24, 0, &mut scroll_offset);
+        assert_eq!(frame.width, crate::terminal::DEFAULT_MODAL_WIDTH as usize);
+        assert!(frame.horizontal_center);
+        assert!(frame.vertical_center);
     }
 }

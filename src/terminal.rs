@@ -183,19 +183,22 @@ pub fn wait_for_constraints(
     }
 }
 
+pub const DEFAULT_MODAL_WIDTH: u16 = 84;
+
 /// Calculates a responsive content width dynamically adapting to the terminal window size.
-/// Stretches to fill the terminal window with a clean 2-column margin.
+/// When max_desired is 0, defaults to DEFAULT_MODAL_WIDTH (84 columns).
+/// When max_desired is provided, bounds to that value.
+/// In all cases, the width is clamped to fit within the terminal window without unnecessary padding.
 pub fn get_content_width(max_desired: u16) -> usize {
     let (term_w, _) = get_terminal_size();
     let available = (term_w as usize).saturating_sub(2);
-
-    if max_desired == 0 || max_desired <= 80 {
-        available.max(MIN_TERM_WIDTH as usize)
+    let desired = if max_desired == 0 {
+        DEFAULT_MODAL_WIDTH as usize
     } else {
-        available
-            .min(max_desired as usize)
-            .max(MIN_TERM_WIDTH as usize)
-    }
+        max_desired as usize
+    };
+
+    available.min(desired).max((MIN_TERM_WIDTH as usize).min(available))
 }
 
 /// Registers a process-wide panic hook ensuring raw mode is disabled and the cursor is restored
