@@ -69,7 +69,8 @@ pub use shortcuts::{Shortcut, ShortcutBar, Shortcuts};
 pub use terminal::{
     clean_exit, get_content_width, get_terminal_size, init_terminal_panic_hook,
     is_terminal_too_small, restore_terminal, wait_for_constraints, wait_for_valid_size,
-    AltScreenGuard, TerminalConstraints, TerminalGuard, MIN_TERM_HEIGHT, MIN_TERM_WIDTH,
+    AltScreenGuard, TerminalConstraints, TerminalGuard, DEFAULT_MODAL_WIDTH, MIN_TERM_HEIGHT,
+    MIN_TERM_WIDTH,
 };
 pub use text_flow::{
     truncate_ansi, truncate_ellipsis, truncate_str, wrap_button_items, wrap_delimited_string,
@@ -103,7 +104,7 @@ pub mod prelude {
     pub use crate::shortcuts::{Shortcut, ShortcutBar, Shortcuts};
     pub use crate::terminal::{
         clean_exit, get_content_width, get_terminal_size, restore_terminal, wait_for_valid_size,
-        AltScreenGuard, TerminalConstraints, TerminalGuard,
+        AltScreenGuard, TerminalConstraints, TerminalGuard, DEFAULT_MODAL_WIDTH,
     };
     pub use crate::text_flow::{
         truncate_ansi, truncate_ellipsis, truncate_str, wrap_button_items, wrap_delimited_string,
